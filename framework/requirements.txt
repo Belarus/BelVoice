@@ -1,0 +1,6 @@
+litellm              # for Normalization.LLM
+jpype1               # for Phonemization.BelG2P
+pooch                # for Phonemization.BelG2P
+omnivoice==0.1.2     # for TTS.OmniVoice
+docker               # for TTS.CoquiTTS
+huggingface_hub      # for TTS.CoquiTTS

@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=70", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "BelVoice"
+version = "0.1.0"
+description = "Belarusian TTS/ASR framework"
+authors = [{name = "Aleś Bułojčyk"}]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+classifiers = [
+    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)"
+]
+license = {file = "LICENSE.md"}
+
+[project.optional-dependencies]
+g2p = ["jpype1"]
+split = ["stanza"]
+llm = ["litellm"]
+omnivoice = ["omnivoice"]
+
+[tool.setuptools.package-data]
+BelVoice = ["jvm/*.jar"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
