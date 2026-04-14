@@ -4,3 +4,5 @@ pooch                # for Phonemization.BelG2P
 omnivoice==0.1.2     # for TTS.OmniVoice
 docker               # for TTS.CoquiTTS
 huggingface_hub      # for TTS.CoquiTTS
+nemo_toolkit[asr]    # for ASR_Nvidia
+torchaudio           # for ASR_Facebook
