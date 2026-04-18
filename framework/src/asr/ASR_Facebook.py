@@ -1,29 +1,18 @@
-from transformers import AutoProcessor, SeamlessM4Tv2Model
-import torchaudio
+from typing import List
+from omnilingual_asr.models.inference.pipeline import ASRInferencePipeline
+
 
 class ASR_Facebook:
     """
-    See models list on the https://huggingface.co/facebook/models?search=seamless-m4t
+    Глядзі спіс мадэляў на https://github.com/facebookresearch/omnilingual-asr
+    Найлепшыя вынікі дае omniASR_LLM_Unlimited_*_v2
     """
-    def __init__(self, model_name: str):
-        processor = AutoProcessor.from_pretrained("facebook/seamless-m4t-v2-large")
-        model = SeamlessM4Tv2Model.from_pretrained("facebook/seamless-m4t-v2-large")
 
-        if model_name in MODEL_LOADERS:
-            print(f"Загружаем мадэль: {model_name}")
-            self._asr_model = MODEL_LOADERS[model_name]()
-        else:
-            available_models = ", ".join(MODEL_LOADERS.keys())
-            raise ValueError(
-                f"Памылка: мадэль '{model_name}' невядомая. "
-                f"Даступныя варыянты: [{available_models}]"
-            )
+    def __init__(self, model_card: str = "omniASR_LLM_Unlimited_1B_v2", lang: str = "bel_Cyrl", batch_size: int = 1):
+        self._pipeline = ASRInferencePipeline(model_card)
+        self._languages = [lang]
+        self._batch_size = batch_size
 
-    def transcript(self, audio_file_path: str) -> str:
-        audio, orig_freq =  torchaudio.load(audio_file_path)
-        if orig_freq != 16_000:
-#            audio =  torchaudio.functional.resample(audio, orig_freq=orig_freq, new_freq=16_000)
-            raise ValueError(f"Файл {audio_file_path} мае частату {orig_freq} замест 16000")
-        audio_inputs = processor(audios=audio, return_tensors="pt")
-        audio_array_from_audio = model.generate(**audio_inputs, tgt_lang="bel")[0].cpu().numpy().squeeze()
-        return audio_array_from_audio
+    def transcript(self, audio_file_path: str) -> List[str]:
+        transcriptions = self._pipeline.transcribe([audio_file_path], lang=self._languages, batch_size=self._batch_size)
+        return transcriptions
