@@ -1,0 +1,19 @@
+{
+    "audio_file_path": "test.wav",
+    "segments": [
+        {
+            "start": 0.21659375000000003,
+            "end": 2.5959687500000004,
+            "speaker_id": "SPEAKER_00",
+            "plain_text": null,
+            "optimized_text": null
+        },
+        {
+            "start": 2.76471875,
+            "end": 6.74721875,
+            "speaker_id": "SPEAKER_00",
+            "plain_text": null,
+            "optimized_text": null
+        }
+    ]
+}
