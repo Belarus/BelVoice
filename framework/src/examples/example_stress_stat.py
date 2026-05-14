@@ -1,7 +1,7 @@
-from stress.StressHomonymsStat import StressHomonymsStat
+from stress.StressStat import StressStat
 
-text = "ё́н адка́за́ў ?"
+text = "Ён адказаў ?"
 print("Заходны тэкст: %s" % text)
 
-text = StressHomonymsStat().apply_stresses(text)
+text = StressStat().apply_stresses(text)
 print("Пасля статыстычнага вырашэння націскаў: %s" % text)
