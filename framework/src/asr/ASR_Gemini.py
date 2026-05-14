@@ -18,7 +18,9 @@ class ASR_Gemini:
     """
 
     PROMPT = """
-    Generate a transcript of this Belarusian language audio. Avoid any preambles.
+    You are a transcription generation model specialized in Belarusian language.
+    Your task:
+    - Listen to the input audio and produce transcript in Belarusian language ONLY.
     """
 
     def __init__(self, model_name: str, prompt: str = PROMPT,
@@ -33,7 +35,7 @@ class ASR_Gemini:
         self._prompt = prompt
         self._thinking_level = thinking_level
 
-    def transcript_file(self, audio_file_path: str) -> str:
+    def transcript_file(self, audio_file_path: str, response_format = None) -> str:
         pl = audio_file_path.lower()
         if pl.endswith(".wav"):
             mime_type = "audio/x-wav"
@@ -70,7 +72,8 @@ class ASR_Gemini:
                 }]
             }],
             temperature=0.0,
-            reasoning_effort=self._thinking_level
+            reasoning_effort=self._thinking_level,
+            response_format=response_format
         )
 
         # delete file
