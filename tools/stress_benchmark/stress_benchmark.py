@@ -63,26 +63,32 @@ class Benchmark:
                         part_unstressed = part.replace("+", "")
                         part_unstressed_lower = part_unstressed.lower()
 
-                        text = "".join(parts[:i]) + f"[{part_unstressed}]" + "".join(parts[i + 1:])
-                        text = text.replace("\u0301", "+").replace("+", "")
+                        text_stresses = "".join(parts[:i]) + f"[{part}]" + "".join(parts[i + 1:])
+                        text = text_stresses.replace("\u0301", "+").replace("+", "")
 
-                        if text in self.known_answers:
-                            word = self.known_answers[text]
-                            self.inc_per_word(part_unstressed_lower, word.lower() == part.lower(), text)
+                        if part_unstressed in self.engine._stresses_nohomographs:
+                            word = self.engine._stresses_nohomographs[part_unstressed].replace("\u0301", "+")
+                            if word != part:
+                                raise Exception(
+                                    f"Слова з націскам у тэксце не супадае з адзіным варыянтам націску ('{word}'): {text_stresses}")
                         else:
-                            word, response = self.check_word(part_unstressed, text)
-                            if not word:
-                                # невядомае слова
-                                continue
-                            word = word.replace("\u0301", "+")
-                            record = json.dumps({
-                                "word_expected": part,
-                                "result": word,
-                                "response": response.model_dump() if response else None,
-                                "text": text},
-                                ensure_ascii=False)
-                            out_f.write(record + "\n")
-                            self.inc_per_word(part_unstressed_lower, word.lower() == part.lower(), text)
+                            if text in self.known_answers:
+                                word = self.known_answers[text]
+                                self.inc_per_word(part_unstressed_lower, word.lower() == part.lower(), text)
+                            else:
+                                word, response = self.check_word(part_unstressed, text)
+                                if not word:
+                                    # невядомае слова
+                                    continue
+                                word = word.replace("\u0301", "+")
+                                record = json.dumps({
+                                    "word_expected": part,
+                                    "result": word,
+                                    "response": response.model_dump() if response else None,
+                                    "text": text},
+                                    ensure_ascii=False)
+                                out_f.write(record + "\n")
+                                self.inc_per_word(part_unstressed_lower, word.lower() == part.lower(), text)
 
         for w in self.total_per_word:
             if self.total_per_word[w] > 0:
@@ -101,34 +107,33 @@ class Benchmark:
 class BenchmarkLLM(Benchmark):
     def __init__(self, input_file: str, out_file_prefix: str, model: str):
         Benchmark.__init__(self, input_file, out_file_prefix)
-        self.engine_llm = StressLLM(model)
+        self.engine = StressLLM(model)
 
     def check_word(self, word: str, full_text: str) -> (str, dict):
         if self.total_count == 0:
             print(f"{self.total_count} - {word}")
         else:
             print(f"{self.total_count} - {word}      {self.ok_count / self.total_count * 100:.2f}%")
-        return self.engine_llm.request_llm(word.lower(), full_text)  # TODO lower
+        return self.engine.request_llm(word.lower(), full_text)  # TODO lower
 
 
 class BenchmarkStat(Benchmark):
     def __init__(self, input_file: str, out_file_prefix: str):
         Benchmark.__init__(self, input_file, out_file_prefix)
-        self.engine_stat = StressStat()
+        self.engine = StressStat()
 
     def check_word(self, word: str, full_text: str) -> (str, dict):
-        return (self.engine_stat.process_word(word), None)
-
+        return (self.engine.process_word(word), None)
 
 # BenchmarkLLM("data/common_voice.txt", "common-gemma4-26-nothink", "openrouter/google/gemma-4-26b-a4b-it").process()
 # BenchmarkLLM("data/zascienak_Malinauka.txt", "malinauka-gemma4-26-nothink",
 #             "openrouter/google/gemma-4-26b-a4b-it").process()
 
 # BenchmarkLLM("data/common_voice.txt", "common-gemini31fl-nothink", "openrouter/google/gemini-3.1-flash-lite").process()
-#p = BenchmarkLLM("data/zascienak_Malinauka.txt", "malinauka-gemini31fl-nothink",
+# p = BenchmarkLLM("data/zascienak_Malinauka.txt", "malinauka-gemini31fl-nothink",
 #                 "openrouter/google/gemini-3.1-flash-lite")
-#p.process()
-#p.show_errors()
+# p.process()
+# p.show_errors()
 
 # BenchmarkStat("data/common_voice.txt", "common_stat").process()
-# BenchmarkStat("data/zascienak_Malinauka.txt", "malinauka_stat").process()
+BenchmarkStat("data/zascienak_Malinauka.txt", "malinauka_stat").process()

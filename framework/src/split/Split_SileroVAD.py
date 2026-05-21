@@ -1,11 +1,12 @@
 import numpy
 import subprocess
 import torch
-from SplitData import VoiceFile, VoicePart, IAudioSplitter
 from silero_vad import load_silero_vad, get_speech_timestamps
 
+from .SplitData import VoiceFile, VoicePart
 
-class Split_SileroVAD(IAudioSplitter):
+
+class Split_SileroVAD:
     """
     Разбівае аўдыяфайл на часткі, якія ўтрымліваюць маўленне, выкарыстоўваючы мадэль SileroVAD.
     """
@@ -60,16 +61,16 @@ class Split_SileroVAD(IAudioSplitter):
             """
         wav = self._read_audio(audio_file_path)
         timestamps = get_speech_timestamps(wav, self._model, return_seconds=True,
-                                      time_resolution=3,
-                                      threshold=threshold,
-                                      min_speech_duration_ms=min_speech_duration_ms,
-                                      max_speech_duration_s=max_speech_duration_s,
-                                      min_silence_duration_ms=min_silence_duration_ms,
-                                      speech_pad_ms=speech_pad_ms,
-                                      visualize_probs=visualize_probs,
-                                      neg_threshold=neg_threshold,
-                                      min_silence_at_max_speech=min_silence_at_max_speech,
-                                      use_max_poss_sil_at_max_speech=use_max_poss_sil_at_max_speech)
+                                           time_resolution=3,
+                                           threshold=threshold,
+                                           min_speech_duration_ms=min_speech_duration_ms,
+                                           max_speech_duration_s=max_speech_duration_s,
+                                           min_silence_duration_ms=min_silence_duration_ms,
+                                           speech_pad_ms=speech_pad_ms,
+                                           visualize_probs=visualize_probs,
+                                           neg_threshold=neg_threshold,
+                                           min_silence_at_max_speech=min_silence_at_max_speech,
+                                           use_max_poss_sil_at_max_speech=use_max_poss_sil_at_max_speech)
         data = VoiceFile(audio_file_path)
         data.segments = [VoicePart(start=item['start'], end=item['end']) for item in timestamps]
         return data

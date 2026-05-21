@@ -14,7 +14,7 @@ print(data.to_string())
 asr = ASR_Gemini("gemini/gemini-3-flash-preview", prompt="""
 You are a transcription generation model specialized in Belarusian language.
 Your task:
-- Listen to the input audio and produce transcript in Belarusian language ONLY.
+- Listen to the input audio and produce a transcript in Belarusian language ONLY.
 Output format:
 - Return ONLY valid JSON (no markdown, no backticks).
 - The JSON must be a single array of objects like:

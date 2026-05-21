@@ -72,7 +72,7 @@ class ASR_Gemini:
                 }]
             }],
             temperature=0.0,
-            reasoning_effort=self._thinking_level,
+            thinking_level=self._thinking_level,
             response_format=response_format
         )
 
@@ -126,7 +126,7 @@ class ASR_Gemini:
                         }]
                     }],
                     temperature=0.0,
-                    reasoning_effort=self._thinking_level
+                    thinking_level=self._thinking_level
                 )
                 # delete file
                 litellm.file_delete(audio_file.id, custom_llm_provider="gemini")
