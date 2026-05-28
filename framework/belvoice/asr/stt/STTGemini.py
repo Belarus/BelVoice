@@ -7,10 +7,10 @@ import litellm
 import numpy as np
 from scipy.io import wavfile
 
-from split.SplitData import VoiceFile
+from belvoice.asr.SplitData import VoiceFile, VoicePart
 
 
-class ASR_Gemini:
+class STTGemini:
     """
     See models list on the https://models.litellm.ai/
     Usually, you need to set LLM's token into some env variable.

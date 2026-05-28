@@ -4,10 +4,10 @@ from typing import List
 import numpy as np
 from omnilingual_asr.models.inference.pipeline import ASRInferencePipeline
 
-from split.SplitData import VoiceFile
+from belvoice.asr.SplitData import VoiceFile, VoicePart
 
 
-class ASR_Facebook:
+class STTFacebook:
     """
     Глядзі спіс мадэляў на https://github.com/facebookresearch/omnilingual-asr
     Найлепшыя вынікі дае omniASR_LLM_Unlimited_*_v2

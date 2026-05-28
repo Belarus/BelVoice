@@ -1,4 +1,4 @@
-from normalization.NormalizationSimple import NormalizationSimple
+from belvoice.synth.normalization.NormalizationSimple import NormalizationSimple
 
 text = "Ён адказаў ABC-123"
 print("Заходны тэкст: %s" % text)

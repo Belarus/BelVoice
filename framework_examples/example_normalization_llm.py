@@ -1,4 +1,4 @@
-from normalization.NormalizationLLM import NormalizationLLM
+from belvoice.synth.normalization.NormalizationLLM import NormalizationLLM
 
 text = "Нарадзіўся ў г. Мінску ў 1974 г."
 print("Заходны тэкст: %s" % text)

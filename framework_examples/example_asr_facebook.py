@@ -1,7 +1,7 @@
-from asr.ASR_Facebook import ASR_Facebook
-from split.SplitData import VoiceFile
+from belvoice.asr.stt.ASR_Facebook import SttFacebook
+from belvoice.asr.split import VoiceFile
 
-asr = ASR_Facebook("omniASR_LLM_Unlimited_300M_v2")
+asr = SttFacebook("omniASR_LLM_Unlimited_300M_v2")
 
 text = asr.transcript_file("test.wav")
 print(f"Тэкст з поўнага файла: {text}")

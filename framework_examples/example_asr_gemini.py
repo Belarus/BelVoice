@@ -1,7 +1,7 @@
-from asr.ASR_Gemini import ASR_Gemini
-from split.SplitData import VoiceFile
+from belvoice.asr.stt.ASR_Gemini import SttGemini
+from belvoice.asr.split import VoiceFile
 
-asr = ASR_Gemini("gemini/gemini-3-flash-preview")
+asr = SttGemini("gemini/gemini-3-flash-preview")
 
 text = asr.transcript_file("test.flac")
 print(f"Тэкст з поўнага файла: {text}")
@@ -11,7 +11,7 @@ asr.transcript_parts(data)
 print("Па частках:")
 print(data.to_string())
 
-asr = ASR_Gemini("gemini/gemini-3-flash-preview", prompt="""
+asr = SttGemini("gemini/gemini-3-flash-preview", prompt="""
 You are a transcription generation model specialized in Belarusian language.
 Your task:
 - Listen to the input audio and produce a transcript in Belarusian language ONLY.

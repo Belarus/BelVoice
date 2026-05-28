@@ -1,4 +1,4 @@
-from tts.TTSCoquiTTS import TTSCoquiTTS
+from belvoice.synth.tts import TTSCoquiTTS
 
 text = "jˈɔn atkazˈau̯"
 

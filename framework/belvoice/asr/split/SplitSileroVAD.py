@@ -3,10 +3,10 @@ import subprocess
 import torch
 from silero_vad import load_silero_vad, get_speech_timestamps
 
-from .SplitData import VoiceFile, VoicePart
+from belvoice.asr.SplitData import VoiceFile, VoicePart
 
 
-class Split_SileroVAD:
+class SplitSileroVAD:
     """
     Разбівае аўдыяфайл на часткі, якія ўтрымліваюць маўленне, выкарыстоўваючы мадэль SileroVAD.
     """

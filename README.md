@@ -64,14 +64,14 @@
 
 # Спіс модуляў
 
-### Нармалізацыя - `Normalization.Simple`
+### Нармалізацыя - `belvoice.synth.normalization.NormalizationSimple`
 
 * **Апісанне:** Замяняе лічбы (ад 0 да 9) на адпаведныя словы (без уліку скланенняў), а лацінскія літары — на іх назвы з
   англійскага алфавіта. Варта выкарыстоўваць выключна для хуткіх тэстаў.
 * **Рэсурсы:** Працуе вельмі хутка на CPU.
 * **Залежнасці:** няма.
 
-### Нармалізацыя - `Normalization.LLM`
+### Нармалізацыя - `belvoice.synth.normalization.NormalizationLLM`
 
 * **Апісанне:** Разумная нармалізацыя праз вялікія моўныя мадэлі (LLM). Якасць узгаднення склонаў і разгортвання
   складаных абрэвіятур наўпрост залежыць ад абранай LLM. Падтрымлівае карыстальніцкія промпты для ўліку спецыфікі вашага
@@ -84,7 +84,7 @@
   Падрабязнасці - на https://docs.litellm.ai/docs/providers/gemini
 * **Залежнасці:** `conda create --name asr python=3.12; conda activate asr; pip install litellm==1.83.13`
 
-### Пазначэнне націскаў - `Stress.Stat`
+### Пазначэнне націскаў - `belvoice.synth.stress.StressStat`
 
 * **Апісанне:** Пазначае націскі на падставе Граматычнай базы беларускай мовы і вырашае праблему амографаў статыстычным
   метадам — абапіраючыся на слоўнік найбольш частотных варыянтаў націску. Нягледзячы на прастату падыходу, тэсты
@@ -92,7 +92,7 @@
 * **Рэсурсы:** Працуе на CPU вельмі хутка.
 * **Залежнасці:** няма.
 
-### Пазначэнне націскаў - `Stress.LLM`
+### Пазначэнне націскаў - `belvoice.synth.stress.StressLLM`
 
 * **Апісанне:** Пазначае націскі на падставе Граматычнай базы беларускай мовы. Для амографаў выклікаецца LLM для аналізу
   граматычных характарыстык слова(на падставе Граматычнай базы) і ягонага значэння (на падставе Тлумачальнага слоўніка)
@@ -100,7 +100,7 @@
 * **Рэсурсы:** Знешні правайдэр (Gemini/GPT) або GPU (Gemma/Llama).
 * **Залежнасці:** `pip install litellm==1.84.0`
 
-### Фанемізацыя - `Phonemization.BelG2P`
+### Фанемізацыя - `belvoice.synth.phonemization.PhonemizationBelG2P`
 
 * **Апісанне:** Пераводзіць тэкст у транскрыпцыю (фанемы) праз BelG2P. Калі TTS-модуль падтрымлівае фанемны ўвод,
   выкарыстанне BelG2P **крытычна паляпшае натуральнасць вымаўлення**. Модуль улічвае складаныя выпадкі беларускай
@@ -110,20 +110,20 @@
 * **Заўвагі:** Спампоўвае 22MiB jar з github.com і патрабуе ўсталяванай java для працы.
 * **Залежнасці:** `conda create --name asr python=3.12 conda-forge::jpype1=1.7.0 pooch=1.9.0`
 
-### Сінтэз маўлення - `TTS.CoquiTTS`
+### Сінтэз маўлення - `belvoice.synth.tts.TTSCoquiTTS`
 
 * **Апісанне:** Выкарыстоўвае мадэль CoquiTTS, натрэніраваную на беларускім голасе з Mozilla CommonVoce. Працуе з
   фанемамі ад `BelG2P`. Гэты модуль зроблены ў выглядзе docker image, бо Coqui-TTS больш не абнаўляецца.
 * **Рэсурсы:** Вельмі хутка генеруе аўдыё на GPU, але цалкам прыдатна для працы і на звычайным CPU.
 * **Залежнасці:** `conda create --name asr python=3.11; conda activate asr; pip install TTS==0.22.0`
 
-### Сінтэз маўлення - `TTS.OmniVoice`
+### Сінтэз маўлення - `belvoice.synth.tts.TTSOmniVoice`
 
 * **Апісанне:** SOTA-мадэль для максімальна натуральнага сінтэзу.
 * **Рэсурсы:** Патрабуе GPU.
 * **Залежнасці:** `conda create --name asr python=3.12; conda activate asr; pip install omnivoice==0.1.2`
 
-### Распазнаванне маўлення - `ASR.Nvidia`
+### Распазнаванне маўлення - `belvoice.asr.stt.STTNvidia`
 
 * **Апісанне:** Выкарыстоўвае мадэлі Nvidia NeMo. Найлепшая мадэль: `nvidia/stt_be_fastconformer_hybrid_large_pc`, але і
   яна мае праблемы з разбіўкай на сказы.
@@ -131,7 +131,7 @@
   секунд.
 * **Залежнасці:** `conda create --name asr python=3.12; conda activate asr; pip install nemo_toolkit[asr]==2.7.3`
 
-### Распазнаванне маўлення - `ASR.Facebook`
+### Распазнаванне маўлення - `belvoice.asr.stt.STTFacebook`
 
 * **Апісанне:** Выкарыстоўвае мадэлі Omnilingual ASR. Найлепшыя: `omniASR_LLM_Unlimited_*_v2`. Яны не дадаюць пунктуацыю
   наогул, але дакладна паказваюць гукі. Можна выкарыстоўваць для алічбоўкі дыялектнага маўлення.
@@ -141,7 +141,7 @@
   `conda create --name asr python=3.12 pytorch==2.8.0 torchaudio==2.8.0 conda-forge::libsndfile==1.0.31; conda activate asr; pip install git+https://github.com/facebookresearch/omnilingual-asr.git@81f51e224ce9e74b02cc2a3eaf21b2d91d743455 fairseq2==0.6.0 --extra-index-url https://fair.pkg.atmeta.com/fairseq2/whl/pt2.8.0/cpu`.
   Змяніце /cpu на нешта больш прыдатнае - дэталі на https://github.com/facebookresearch/fairseq2#variants.
 
-### Распазнаванне маўлення - `ASR.Gemini`
+### Распазнаванне маўлення - `belvoice.asr.stt.STTGemini`
 
 * **Апісанне:** Выкарыстоўвае мадэлі Gemini. На сённяшні дзень (красавік 2026 года) мадэлі, такія як Gemini 3 Flash і
   Gemini 3.1 Pro, забяспечваюць, бадай, самае дакладнае распазнаванне маўлення з разуменнем кантэксту і добрай
@@ -151,7 +151,7 @@
   `conda create --name asr python=3.12 numpy=2.4.4 scipy=1.17.1; conda activate asr; pip install litellm==1.83.13`,
   патрэбны `GEMINI_API_KEY` у пераменных асяроддзя.
 
-### Разбіўка на часткі - `Split.Pyannote`
+### Разбіўка на часткі - `belvoice.asr.split.SplitPyannote`
 
 * **Апісанне:** Выкарыстоўвае мадэлі pyannote/speaker-diarization-community-1 ці pyannote/segmentation-3.0 для
   выдзялення маўлення з аўдыё і падзелу яго на асобныя фрагменты з пазнакамі часу. Можа вызначаць спікераў, альбо проста
@@ -159,20 +159,20 @@
 * **Рэсурсы:** Працуе на CPU, але для вялікіх аўдыёфайлаў рэкамендуецца GPU.
 * **Залежнасці:** `conda create --name asr python=3.12; conda activate asr; pip install pyannote.audio==4.0.4`
 
-### Разбіўка на часткі - `Split.Silero`
+### Разбіўка на часткі - `belvoice.asr.split.SplitSilero`
 
 * **Апісанне:** Выкарыстоўвае мадэль Silero VAD для выдзялення маўлення з аўдыё.
 * **Рэсурсы:** Працуе на CPU, але для вялікіх аўдыёфайлаў рэкамендуецца GPU.
 * **Залежнасці:** `conda create --name asr python=3.12 numpy=2.4.4; conda activate asr; pip install silero-vad==6.2.1`
 
-### Аб'яднанне частак - `Split.MergeWindow`
+### Аб'яднанне частак - `belvoice.asr.merge.MergeWindow`
 
 * **Апісанне:** Аб'ядноўвае малыя фрагменты аўдыё ў адзін фрагмент - шукае фрагменты, якія агулам даюць працягласць не
   больш за патрэбную.
 * **Рэсурсы:** Працуе на CPU вельмі хутка.
 * **Залежнасці:** няма.
 
-### Аб'яднанне частак - `Split.MergeGraph`
+### Аб'яднанне частак - `belvoice.asr.merge.MergeGraph`
 
 * **Апісанне:** Аб'ядноўвае малыя фрагменты аўдыё ў адзін фрагмент - шукае фрагменты як абыход графа.
 * **Рэсурсы:** Працуе на CPU вельмі хутка.

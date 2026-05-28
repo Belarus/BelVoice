@@ -1,8 +1,9 @@
 import networkx as nx
-from .SplitData import VoiceFile, VoicePart
+
+from belvoice.asr.SplitData import VoiceFile, VoicePart
 
 
-class Merge_Graph:
+class MergeGraph:
     """
     Разглядаем сегменты як граф, дзе рэбры паміж вузламі існуюць, калі адлегласць
     паміж імі менш за max_segment_duration.

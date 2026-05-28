@@ -1,4 +1,4 @@
-from phonemization.PhonemizationBelG2P import PhonemizationBelG2P
+from belvoice.synth.phonemization import PhonemizationBelG2P
 
 text = "ё́н адказа́ў"
 

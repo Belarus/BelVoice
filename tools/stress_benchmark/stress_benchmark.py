@@ -6,8 +6,8 @@ import re
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../framework/src')))
-from stress.StressLLM import StressLLM
-from stress.StressStat import StressStat
+from belvoice.synth.stress import StressLLM
+from belvoice.synth.stress import StressStat
 
 word_pattern = r'([ёйцукенгшўзхфывапролджэячсмітьбю\u02BC\u0301\+]+)'
 

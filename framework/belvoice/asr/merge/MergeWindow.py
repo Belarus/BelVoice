@@ -1,7 +1,7 @@
-from .SplitData import VoiceFile, VoicePart
+from belvoice.asr.SplitData import VoiceFile, VoicePart
 
 
-class Merge_Window:
+class MergeWindow:
     """
     Шукаем максімальную паўзу(але не меншую за 200мс) ў нейкім вакне часу (8-10 хвілін), і рэжам па ёй.
     Калі паўзаў няма, рэжам па паўзе большай за 200мс, якая ёсць да 8 хвілін.

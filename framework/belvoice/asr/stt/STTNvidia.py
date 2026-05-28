@@ -4,10 +4,10 @@ import nemo.collections.asr as nemo_asr
 import numpy as np
 import torch
 
-from split.SplitData import VoiceFile
+from belvoice.asr.SplitData import VoiceFile, VoicePart
 
 
-class ASR_Nvidia:
+class STTNvidia:
     """
     See models list on the https://huggingface.co/nvidia/models?search=stt_be
     """

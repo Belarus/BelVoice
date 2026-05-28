@@ -1,4 +1,4 @@
-from split.Split_Pyannote import Split_Pyannote
+from belvoice.asr.split import Split_Pyannote
 
 parts = Split_Pyannote().split("test.wav")
 print(parts.to_string())

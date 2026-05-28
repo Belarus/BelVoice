@@ -1,7 +1,7 @@
-from asr.ASR_Nvidia import ASR_Nvidia
-from split.SplitData import VoiceFile
+from belvoice.asr.stt.ASR_Nvidia import SttNvidia
+from belvoice.asr.split import VoiceFile
 
-asr = ASR_Nvidia("nvidia/stt_be_conformer_ctc_large")
+asr = SttNvidia("nvidia/stt_be_conformer_ctc_large")
 
 text = asr.transcript_file("test.opus")
 print(f"Тэкст з поўнага файла: {text}")

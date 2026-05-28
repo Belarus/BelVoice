@@ -1,4 +1,4 @@
-from stress.StressStat import StressStat
+from belvoice.synth.stress import StressStat
 
 text = "Ён адказаў ?"
 print("Заходны тэкст: %s" % text)

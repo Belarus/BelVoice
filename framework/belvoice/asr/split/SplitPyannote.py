@@ -6,10 +6,10 @@ from pyannote.audio import Pipeline
 from pyannote.audio.pipelines import VoiceActivityDetection
 from pyannote.audio.pipelines.utils.hook import ProgressHook
 
-from .SplitData import VoiceFile, VoicePart
+from belvoice.asr.SplitData import VoiceFile, VoicePart
 
 
-class Split_Pyannote:
+class SplitPyannote:
     """
     Разбівае аўдыяфайл на часткі, якія ўтрымліваюць маўленне, выкарыстоўваючы https://github.com/pyannote/pyannote-audio.
 
