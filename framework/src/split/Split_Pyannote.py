@@ -61,14 +61,4 @@ class Split_Pyannote:
             data.segments = [VoicePart(start=turn.start, end=turn.end, speaker_id=speaker)
                              for turn, speaker in output.exclusive_speaker_diarization]
 
-        durations = [part.end - part.start for part in data.segments]
-        import statistics
-        if durations:
-            print(f"Знойдзена фрагментаў маўлення: {len(durations)}")
-            print(f"Мінімальная працягласць: {min(durations):.2f} сек")
-            print(f"Максімальная працягласць: {max(durations):.2f} сек")
-            print(f"Сярэдняя працягласць (Mean): {statistics.mean(durations):.2f} сек")
-            print(f"Медыяна (Median): {statistics.median(durations):.2f} сек")
-            print(f"Агульны час маўлення: {sum(durations):.2f} сек")
-
         return data

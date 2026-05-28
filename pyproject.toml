@@ -16,10 +16,6 @@ classifiers = [
 license = {file = "LICENSE.md"}
 
 [project.optional-dependencies]
-g2p = ["jpype1"]
-split = ["stanza"]
-llm = ["litellm"]
-omnivoice = ["omnivoice"]
 
 [tool.setuptools.package-data]
 BelVoice = ["jvm/*.jar"]

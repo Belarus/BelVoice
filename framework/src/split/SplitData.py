@@ -72,6 +72,51 @@ class VoiceFile:
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
+    def dump_stat(self) -> None:
+        import statistics
+
+        durations = [part.end - part.start for part in self.segments]
+        if durations:
+            p10 = statistics.quantiles(durations, n=10)
+            print(
+                f"Працягласць маўлення: {len(self.segments)} сегментаў {min(durations):.2f}-{max(durations):.2f} с, медыяна: {statistics.median(durations):.2f} с, 10/90%: {p10[0]:.2f}/{p10[-1]:.2f}")
+        else:
+            print("Няма сегментаў маўлення")
+
+        pauses = []
+        for i in range(1, len(self.segments)):
+            pause = self.segments[i].start - self.segments[i - 1].end
+            pauses.append(pause)
+
+        if pauses:
+            p10 = statistics.quantiles(pauses, n=10)
+            print(
+                f"Працягласць паўз: {min(pauses):.2f}-{max(pauses):.2f} с, медыяна: {statistics.median(pauses):.2f} с, 10/90%: {p10[0]:.2f}/{p10[-1]:.2f}")
+        else:
+            print("Няма паўз")
+
+    @staticmethod
+    def dump_stats(files: list[VoiceFile]) -> None:
+        import statistics
+
+        durations = []
+        pauses = []
+        for f in files:
+            for part in f.segments:
+                durations.append(part.end - part.start)
+
+            for i in range(1, len(f.segments)):
+                pause = f.segments[i].start - f.segments[i - 1].end
+                pauses.append(pause)
+
+        p10 = statistics.quantiles(durations, n=10)
+        print(
+            f"Агульная працягласць маўлення: {len(durations)} сегментаў, {min(durations):.2f}-{max(durations):.2f} с, медыяна: {statistics.median(durations):.2f} с, 10/90%: {p10[0]:.2f}/{p10[-1]:.2f} ")
+
+        p10 = statistics.quantiles(pauses, n=10)
+        print(
+            f"Агульная працягласць паўз: {min(pauses):.2f}-{max(pauses):.2f} с, медыяна: {statistics.median(pauses):.2f} с, 10/90%: {p10[0]:.2f}/{p10[-1]:.2f}")
+
     @staticmethod
     def load_from_json(json_path: str) -> 'VoiceFile':
         with open(json_path, "r", encoding="utf-8") as f:
@@ -79,4 +124,19 @@ class VoiceFile:
 
         obj = VoiceFile(data.get("audio_file_path"))
         obj.segments = [VoicePart.from_dict(p) for p in data.get("segments", [])]
+
+        prev_end = None
+        for part in obj.segments:
+            if part.start is None:
+                raise ValueError(f"Памылка пры загрузцы {json_path}: адсутнічае поле 'start' у адным з сегментаў")
+            if part.end is None:
+                raise ValueError(f"Памылка пры загрузцы {json_path}: адсутнічае поле 'end' у адным з сегментаў")
+            if part.start >= part.end:
+                raise ValueError(
+                    f"Памылка пры загрузцы {json_path}: start ({part.start}) мусіць быць меншы за end ({part.end})")
+            if prev_end and part.start <= prev_end:
+                raise ValueError(
+                    f"Памылка пры загрузцы {json_path}: наступны start ({part.start}) мусіць быць большы за папярэдні end ({prev_end})")
+            prev_end = part.end
+
         return obj
