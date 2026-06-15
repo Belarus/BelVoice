@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=70", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,10 +10,8 @@ authors = [{name = "Aleś Bułojčyk", email = "alex73mail@gmail.com"}]
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
-classifiers = [
-    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)"
-]
-license = {file = "LICENSE.md"}
+license = "LGPL-3.0-or-later"
+license-files = ["LICENSE.md"]
 
 [project.optional-dependencies]
 

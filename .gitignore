@@ -1,6 +1,7 @@
 /.venv/
-/.idea/
+.idea/
 /dist/
 __pycache__/
 target/
 /.project
+*.egg-info/
