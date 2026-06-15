@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "BelVoice"
 version = "0.1.0"
 description = "Belarusian TTS/ASR framework"
-authors = [{name = "Aleś Bułojčyk"}]
+authors = [{name = "Aleś Bułojčyk", email = "alex73mail@gmail.com"}]
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
@@ -18,10 +18,10 @@ license = {file = "LICENSE.md"}
 [project.optional-dependencies]
 
 [tool.setuptools.package-data]
-BelVoice = ["jvm/*.jar"]
+"*" = ["**/*.json", "**/*.wav"]
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = {"" = "framework"}
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["framework"]

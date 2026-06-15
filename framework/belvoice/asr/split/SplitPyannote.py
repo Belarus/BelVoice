@@ -47,7 +47,7 @@ class SplitPyannote:
             # Пайплайн сам зробіць і inference, і агрэгацыю, і бінарызацыю
             speech_annotation = self._pipeline(audio_file_path)
 
-            data = VoiceFile(audio_file_path)
+            data = VoiceFile()
             data.segments = [
                 # get_timeline().support() злучае накладзеныя адзін на аднаго сегменты
                 VoicePart(start=segment.start, end=segment.end)
@@ -57,7 +57,7 @@ class SplitPyannote:
             with ProgressHook() as hook:
                 output = self._pipeline(audio_file_path, hook=hook)
 
-            data = VoiceFile(audio_file_path)
+            data = VoiceFile()
             data.segments = [VoicePart(start=turn.start, end=turn.end, speaker_id=speaker)
                              for turn, speaker in output.exclusive_speaker_diarization]
 

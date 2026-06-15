@@ -18,6 +18,9 @@ class MergeGraph:
     def __init__(self,
                  max_segment_duration: float = 10 * 60
                  ):
+        """
+        :param max_segment_duration: максімальная даўжыня сегмента пасля merge
+        """
         self.max_segment_duration = max_segment_duration
 
     def _get_cut_point(self, idx: int, data: VoiceFile, n: int) -> float:
