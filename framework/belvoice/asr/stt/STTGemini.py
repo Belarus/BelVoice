@@ -1,6 +1,7 @@
-import os
 import json
+import os
 import re
+from pathlib import Path
 from typing import Optional, Literal
 
 import litellm
@@ -66,6 +67,15 @@ class STTGemini:
         }
     }
 
+    MIME_TYPES = {
+        "wav": "audio/x-wav", #"audio/x-wav",
+        "opus": "audio/ogg",
+        "mp3": "audio/mp3",
+        "ogg": "audio/ogg",
+        "aac": "audio/aac",
+        "flac": "audio/flac"
+    }
+
     def __init__(self, model_name: str, prompt: str = None,
                  thinking_level: Optional[Literal["none", "minimal", "low", "medium", "high"]] = "none") -> None:
         if not model_name.startswith("gemini/"):
@@ -78,13 +88,17 @@ class STTGemini:
         self._prompt = prompt
         self._thinking_level = thinking_level
 
-    def transcript_file(self, audio_file_path: str) -> str:
+    def transcript_file(self, audio_file_path: str, convert_to_format: str = None) -> str:
         """
         Робіць транскрыпт усяго файла без разбіўкі на сегменты.
         """
-        temp_file = VoiceFile.extract_wav(audio_file_path)
+        if convert_to_format:
+            temp_file = VoiceFile.extract_wav(audio_file_path, convert_to_format=convert_to_format)
+        else:
+            temp_file = audio_file_path
         response = self._transcript_file(temp_file, self._prompt if self._prompt else self.PROMPT, None)
-        os.remove(temp_file)
+        if convert_to_format:
+            os.remove(temp_file)
 
         return response.choices[0].message.content
 
@@ -137,6 +151,7 @@ class STTGemini:
 
     def _transcript_file(self, temp_file: str, prompt: str, response_format: str):
         audio_file = litellm.create_file(file=temp_file, custom_llm_provider="gemini", purpose="user_data")
+        audio_file_extension = Path(temp_file).suffix.lstrip('.')
 
         response = litellm.completion(
             model=self._model_name,
@@ -147,7 +162,7 @@ class STTGemini:
                     "text": prompt
                 }, {
                     "type": "file",
-                    "file": {"file_id": audio_file.id, "format": "audio/x-wav"}
+                    "file": {"file_id": audio_file.id, "format": self.MIME_TYPES[audio_file_extension]}
                 }]
             }],
             temperature=0.0,

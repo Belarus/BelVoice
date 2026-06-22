@@ -145,19 +145,20 @@ class VoiceFile:
                                 segment.start if segment else None, segment.end if segment else None)
 
     @staticmethod
-    def extract_wav(audio_file: str | Path, start=None, end=None) -> str:
+    def extract_wav(audio_file: str | Path, start=None, end=None, convert_to_format: str = "wav") -> str:
         """
         Extract part of audio file using ffmpeg with ASR-specific parameters: wav mono, 16k, pcm_s16le.
         """
-        temp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+        temp_file = tempfile.NamedTemporaryFile(suffix="." + convert_to_format, delete=False)
         cmd = [
             "ffmpeg",
             "-y",
             "-i", str(audio_file),
-            "-acodec", "pcm_s16le",
             "-ar", "16000",
-            "-ac", "1",
+            "-ac", "1"
         ]
+        if convert_to_format == "wav":
+            cmd.extend(["-acodec", "pcm_s16le"])
         if start is not None:
             cmd.extend(["-ss", str(start)])
         if end is not None:
