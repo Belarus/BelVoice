@@ -1,39 +1,46 @@
 import json
 import importlib.resources
 import re
-
+from .common import WORD_PATTERN, word_match_case
 
 class StressStat:
     def __init__(self):
-        dir = importlib.resources.files('stress')
+        dir = importlib.resources.files('belvoice.synth.stress')
         with (dir.joinpath('stresses-nohomographs.json').open('r', encoding='utf-8') as json_file):
             self._stresses_nohomographs = json.load(json_file)
         with (dir.joinpath('stresses-stat.json').open('r', encoding='utf-8') as json_file):
             self._stresses_stat = json.load(json_file)
 
     def apply_stresses(self, text: str) -> str:
-        word_pattern = r'([ёйцукенгшўзхфывапролджэячсмітьбю\u02BC\u0301]+)'
+        # Знаходзім усе беларускія словы ў тэксце
+        matches = list(re.finditer(WORD_PATTERN, text, flags=re.IGNORECASE))
 
-        parts = re.split(word_pattern, text, flags=re.IGNORECASE)
-        result_parts = []
-        for i, part in enumerate(parts):
-            if not re.fullmatch(word_pattern, part, flags=re.IGNORECASE) or "\u0301" in part:
-                # гэта не слова, альбо слова з пазначаным націскам
+        result = ""
+        last_end = 0
+        for match in matches:
+            word = match.group()
+            # Дадаём у выніковы тэкст усё, што было паміж папярэднім і бягучым словам
+            result += text[last_end:match.start()]
+            last_end = match.end()
+
+            if "\u0301" in word:
+                # слова з ужо пазначаным націскам
+                result += word
                 continue
 
-            part_unstressed = part.replace("\u0301", "")
-            part_lower = part_unstressed.lower()
+            word_lower = word.lower()
 
-            if part_unstressed in self._stresses_nohomographs:
-                parts[i] = self._stresses_nohomographs[part_unstressed]
-            elif part_unstressed in self._stresses_stat:
-                parts[i] = self._stresses_stat[part_unstressed]
-            elif part_lower in self._stresses_nohomographs:
-                parts[i] = self._stresses_nohomographs[part_lower]
-            elif part_lower in self._stresses_stat:
-                parts[i] = self._stresses_stat[part_lower]
+            if word in self._stresses_stat:
+                result += self._stresses_stat[word]
+            elif word_lower in self._stresses_stat:
+                result += word_match_case(word, self._stresses_stat[word_lower])
+            else:
+                result += word
 
-        return "".join(result_parts)
+        # Дадаём хвост тэксту пасля апошняга знойдзенага слова
+        result += text[last_end:]
+
+        return result
 
     def process_word(self, word: str) -> str:
         return self._stresses_stat.get(word, self._stresses_stat.get(word.lower(), None))
