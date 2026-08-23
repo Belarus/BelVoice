@@ -6,40 +6,33 @@ import json
 import tempfile
 import subprocess
 from pathlib import Path
-
+import numpy as np
 
 class VoicePart:
     """
     Утрымлівае інфармацыю пра адну частку аўдыяфайла (маўленне аднаго чалавека без паўзы).
+    Усе параметры захоўваюцца ва ўнутраным dict (self.data), таму любыя дадатковыя
+    (карыстальніцкія) палі таксама будуць запісаны/прачытаны з файла.
+    Агульныя параметры:
+        - start - пачатак маўленчага фрагмента ў секундах
+        - end - канец маўленчага фрагмента ў секундах
+        - speaker_id - хто гаворыць
+        - text - распазнаны тэкст
     """
 
-    def __init__(self,
-                 start: float = None,  # пачатак маўленчага фрагмента ў секундах
-                 end: float = None,  # канец маўленчага фрагмента ў секундах
-                 speaker_id: str = None,  # хто гаворыць
-                 text: str = None  # распазнаны тэкст
-                 ) -> None:
-        self.start = start
-        self.end = end
-        self.speaker_id = speaker_id
-        self.text = text
+    def __init__(self, **kwargs) -> None:
+        self.__dict__.update(kwargs)  # дадатковыя (карыстальніцкія) палі кладзём проста ў __dict__
+
+    def __getattr__(self, name):
+        # выклікаецца толькі калі атрыбут не знойдзены звычайным спосабам (яго няма ў __dict__)
+        return None
 
     def to_dict(self) -> dict:
-        return {
-            "start": self.start,
-            "end": self.end,
-            "speaker_id": getattr(self, "speaker_id", None),
-            "text": getattr(self, "text", None)
-        }
+        return dict(self.__dict__)
 
     @staticmethod
     def from_dict(data: dict) -> 'VoicePart':
-        part = VoicePart()
-        part.start = data.get("start")
-        part.end = data.get("end")
-        part.speaker_id = data.get("speaker_id")
-        part.text = data.get("text", None)
-        return part
+        return VoicePart(**data)
 
 
 class VoiceFile:
@@ -167,3 +160,29 @@ class VoiceFile:
 
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=True)
         return temp_file.name
+
+    @staticmethod
+    def read_wav(audio_file: str | Path, start=None, end=None):
+        """
+        Чытае аўдыяфайл і канвертуе яго ў фармат PCM f32le, 16kHz, mono з дапамогай FFmpeg.
+        :return: Масіў Numpy, які змяшчае сырыя даныя аўдыясігналу ў фармаце float32.
+        """
+        # чытаем увесь файл як PCM f32le, 16kHz, mono
+        command = [
+            'ffmpeg',
+            '-i', str(audio_file),
+            '-f', 'f32le',
+            '-ar', '16000',
+            '-ac', '1'
+        ]
+        if start is not None:
+            command.extend(["-ss", str(start)])
+        if end is not None:
+            command.extend(["-to", str(end)])
+        command.extend(["pipe:1"])
+        process = subprocess.run(command, capture_output=True)
+        if process.returncode != 0:
+            raise RuntimeError(f"FFmpeg error: {process.stderr.decode()}")
+
+        # канвертуем байты ў numpy array (float32)
+        return np.frombuffer(process.stdout, dtype=np.float32)

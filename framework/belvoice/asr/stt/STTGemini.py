@@ -4,18 +4,14 @@ import re
 from pathlib import Path
 from typing import Optional, Literal
 
-import litellm
+from google import genai
+from google.genai import types
+from google.genai.types import ThinkingConfig, ThinkingLevel
 
 from belvoice.asr.SplitData import VoiceFile, VoicePart
 
 
 class STTGemini:
-    """
-    See models list on the https://models.litellm.ai/
-    Usually, you need to set LLM's token into some env variable.
-    Выкарыстоўвайце толькі назвы мадэляў, якія пачынаюцца з 'gemini/'. Напрыклад, 'gemini/gemini-3-flash-preview'.
-    """
-
     PROMPT = """
     Act as a professional transcriber. Provide a detailed, verbatim text transcript of this Belarusian audio file.
     Do not place timestamps. Do not add comments, explanations, or additional text.
@@ -47,28 +43,22 @@ class STTGemini:
     - Do NOT add comments, explanations, or additional text. Return raw JSON only.
     """
 
-    RESPONSE_FORMAT_TIMESTAMPS = {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "subtitles_list",
-            "schema": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "start": {"type": "string"},
-                        "end": {"type": "string"},
-                        "text": {"type": "string"}
-                    },
-                    "required": ["start", "end", "text"],
-                    "additionalProperties": False
-                }
-            }
+    RESPONSE_FORMAT_TIMESTAMPS_SCHEMA = {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "start": {"type": "string"},
+                "end": {"type": "string"},
+                "text": {"type": "string"}
+            },
+            "required": ["start", "end", "text"],
+            "additionalProperties": False
         }
     }
 
     MIME_TYPES = {
-        "wav": "audio/x-wav", #"audio/x-wav",
+        "wav": "audio/x-wav",  # "audio/x-wav",
         "opus": "audio/ogg",
         "mp3": "audio/mp3",
         "ogg": "audio/ogg",
@@ -78,15 +68,13 @@ class STTGemini:
 
     def __init__(self, model_name: str, prompt: str = None,
                  thinking_level: Optional[Literal["none", "minimal", "low", "medium", "high"]] = "none") -> None:
-        if not model_name.startswith("gemini/"):
-            raise Exception(
-                f"{model_name} - не мадэль Gemini. Падтрымліваюцца толькі Gemini каб мець магчымасць запампаваць файл на Google для распазнавання.")
         if os.environ.get("GEMINI_API_KEY") is None:
             raise Exception("Памылка: не ўстаноўлены GEMINI_API_KEY у якасці зменнай асяроддзя.")
 
         self._model_name = model_name
         self._prompt = prompt
         self._thinking_level = thinking_level
+        self._client = genai.Client()
 
     def transcript_file(self, audio_file_path: str, convert_to_format: str = None) -> str:
         """
@@ -100,7 +88,7 @@ class STTGemini:
         if convert_to_format:
             os.remove(temp_file)
 
-        return response.choices[0].message.content
+        return response.text
 
     def transcript_parts(self, data: VoiceFile) -> None:
         """
@@ -110,11 +98,19 @@ class STTGemini:
             if segment.text:
                 continue
             if segment.end - segment.start >= 0.2:  # толькі часткі даўжэйшыя за 0.2 секунды
-                temp_file = data.segment2wav(segment)
-                response = self._transcript_file(temp_file, self._prompt if self._prompt else self.PROMPT, None)
-                os.remove(temp_file)
+                self.transcript_part(data, segment)
 
-                segment.text = response.choices[0].message.content
+    def transcript_part(self, data: VoiceFile, segment: VoicePart) -> None:
+        """
+        Робіць транскрыпт для аднаго сегмента.
+        """
+        temp_file = data.segment2wav(segment)
+        try:
+            response = self._transcript_file(temp_file, self._prompt if self._prompt else self.PROMPT, None)
+        finally:
+            os.remove(temp_file)
+
+        segment.text = response.text
 
     def transcript_parts_with_timestamps(self, data: VoiceFile, segment_processed_callback=None) -> None:
         """
@@ -136,10 +132,10 @@ class STTGemini:
 
             temp_file = data.segment2wav(segment)
             response = self._transcript_file(temp_file, self._prompt if self._prompt else self.PROMPT_TIMESTAMPS,
-                                             self.RESPONSE_FORMAT_TIMESTAMPS)
+                                             self.RESPONSE_FORMAT_TIMESTAMPS_SCHEMA)
             os.remove(temp_file)
 
-            transcript = response.choices[0].message.content
+            transcript = response.text
 
             if segment_processed_callback:
                 segment_processed_callback(segment)
@@ -149,28 +145,25 @@ class STTGemini:
             data.segments[i: i + 1] = replace_segments  # замяняем на сегменты з Gemini
             i += len(replace_segments)
 
-    def _transcript_file(self, temp_file: str, prompt: str, response_format: str):
-        audio_file = litellm.create_file(file=temp_file, custom_llm_provider="gemini", purpose="user_data")
-        audio_file_extension = Path(temp_file).suffix.lstrip('.')
+    def _transcript_file(self, temp_file: str, prompt: str, schema: dict):
+        if schema:
+            config = types.GenerateContentConfig(temperature=0,
+                                                 # response_mime_type="application/json", response_schema=schema,
+                                                 audio_timestamp=True)
+        else:
+            config = types.GenerateContentConfig(temperature=0,
+                                                 thinking_config=ThinkingConfig(thinking_level=ThinkingLevel.MINIMAL))
 
-        response = litellm.completion(
-            model=self._model_name,
-            messages=[{
-                "role": "user",
-                "content": [{
-                    "type": "text",
-                    "text": prompt
-                }, {
-                    "type": "file",
-                    "file": {"file_id": audio_file.id, "format": self.MIME_TYPES[audio_file_extension]}
-                }]
-            }],
-            temperature=0.0,
-            thinking_level=self._thinking_level,
-            response_format=response_format
-        )
+        audio_file = self._client.files.upload(file=temp_file)
+        try:
+            response = self._client.models.generate_content(
+                model=self._model_name,
+                contents=[prompt, audio_file],
+                config=config
+            )
+        finally:
+            self._client.files.delete(name=audio_file.name)
 
-        litellm.file_delete(audio_file.id, custom_llm_provider="gemini")
         return response
 
     def _convert_transcript_to_segments(self, source_segment: VoicePart, transcript: str) -> list[VoicePart]:
