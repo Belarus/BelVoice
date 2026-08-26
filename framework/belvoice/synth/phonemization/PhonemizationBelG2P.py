@@ -8,10 +8,12 @@ def start_jvm():
     if jpype.isJVMStarted():
         return
 
-    jar_path = pooch.retrieve(
-        url="https://github.com/Belarus/BelG2P/releases/download/1.0.0/linguistics.BelG2P-1.0.0-jar-with-dependencies.jar",
-        known_hash=None, # Можна дадаць хэш для праверкі цэласнасці
-    )
+    jar_path = os.environ.get("PHONEMIZATION_BELG2P_JAR")
+    if not jar_path:
+        jar_path = pooch.retrieve(
+            url="https://github.com/Belarus/BelG2P/releases/download/1.0.0/linguistics.BelG2P-1.0.0-jar-with-dependencies.jar",
+            known_hash=None, # Можна дадаць хэш для праверкі цэласнасці
+        )
 
     # Запускаем JVM
     jpype.startJVM(
@@ -30,15 +32,11 @@ class PhonemizationBelG2P:
         from org.alex73.fanetyka.impl.str import ToStringIPA2TTS
 
         db = GrammarDB2.initializeFromJar();
-        finder = GrammarFinder(db)
-        self.config = FanetykaConfig(finder)
-        self.outType = ToStringIPA2TTS()
+        self.finder = GrammarFinder(db)
 
-    def convert(self, words: str):
-        from org.alex73.fanetyka.impl import Fanetyka3
+    def convert(self, text: str):
+        from org.alex73.fanetyka.impl import Fanetyka3, FanetykaText
         from java.util import ArrayList
 
-        f = Fanetyka3(self.config)
-        jwords = ArrayList(words.split())
-        f.calcFanetyka(jwords)
-        return f.toString(self.outType)
+        ft = FanetykaText(self.finder, text)
+        return ft.ipa2tts

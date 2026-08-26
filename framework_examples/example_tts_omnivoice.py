@@ -1,4 +1,4 @@
-from belvoice.synth.tts import TTSOmniVoice
+from belvoice.synth.tts.TTSOmniVoice import TTSOmniVoice
 
 text = "ё́н адказа́ў ?"
 

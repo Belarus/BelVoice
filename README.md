@@ -107,7 +107,8 @@
   фанетыкі: асіміляцыю зычных па глухасці/звонкасці і мяккасці, прыстаўныя гукі, правільнае вымаўленне злучнікаў і
   прыназоўнікаў у патоку маўлення.
 * **Рэсурсы:** Працуе CPU дастаткова хутка.
-* **Заўвагі:** Спампоўвае 22MiB jar з github.com і патрабуе ўсталяванай java для працы.
+* **Заўвагі:** Спампоўвае 22MiB jar з github.com і патрабуе ўсталяванай java для працы. Можна задаць зменную асяроддзя 
+  `PHONEMIZATION_BELG2P_JAR` каб jar не спампоўваўся, а браўся з гэтага шляху.
 * **Залежнасці:** `conda create --name asr python=3.12 conda-forge::jpype1=1.7.0 pooch=1.9.0`
 
 ### Сінтэз маўлення - `belvoice.synth.tts.TTSCoquiTTS`
@@ -121,7 +122,7 @@
 
 * **Апісанне:** SOTA-мадэль для максімальна натуральнага сінтэзу.
 * **Рэсурсы:** Патрабуе GPU.
-* **Залежнасці:** `conda create --name asr python=3.12; conda activate asr; pip install omnivoice==0.1.2`
+* **Залежнасці:** `conda create --name asr python=3.12; conda activate asr; pip install omnivoice==0.2.1`
 
 ### Распазнаванне маўлення - `belvoice.asr.stt.STTNvidia`
 
