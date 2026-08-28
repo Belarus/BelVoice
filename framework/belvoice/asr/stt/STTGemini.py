@@ -1,7 +1,6 @@
 import json
 import os
 import re
-from pathlib import Path
 from typing import Optional, Literal
 
 from google import genai
@@ -67,7 +66,8 @@ class STTGemini:
     }
 
     def __init__(self, model_name: str, prompt: str = None,
-                 thinking_level: Optional[Literal["none", "minimal", "low", "medium", "high"]] = "none") -> None:
+                 thinking_level: Optional[Literal["none", "minimal", "low", "medium", "high"]] = "none",
+                 audio_transcription_config: Optional[types.AudioTranscriptionConfig] = None) -> None:
         if os.environ.get("GEMINI_API_KEY") is None:
             raise Exception("Памылка: не ўстаноўлены GEMINI_API_KEY у якасці зменнай асяроддзя.")
 
@@ -75,6 +75,7 @@ class STTGemini:
         self._prompt = prompt
         self._thinking_level = thinking_level
         self._client = genai.Client()
+        self._audio_transcription_config = audio_transcription_config
 
     def transcript_file(self, audio_file_path: str, convert_to_format: str = None) -> str:
         """
@@ -146,21 +147,30 @@ class STTGemini:
             i += len(replace_segments)
 
     def _transcript_file(self, temp_file: str, prompt: str, schema: dict):
-        if schema:
-            config = types.GenerateContentConfig(temperature=0,
-                                                 # response_mime_type="application/json", response_schema=schema,
-                                                 audio_timestamp=True)
-        else:
-            config = types.GenerateContentConfig(temperature=0,
-                                                 thinking_config=ThinkingConfig(thinking_level=ThinkingLevel.MINIMAL))
-
         audio_file = self._client.files.upload(file=temp_file)
         try:
-            response = self._client.models.generate_content(
-                model=self._model_name,
-                contents=[prompt, audio_file],
-                config=config
-            )
+            if self._audio_transcription_config:
+                response = self._client.interactions.create(
+                    model=self._model_name,
+                    input=audio_file,
+                    config=types.GenerateContentConfig(
+                        audio_transcription_config=self._audio_transcription_config
+                    )
+                )
+            else:
+                if schema:
+                    config = types.GenerateContentConfig(temperature=0,
+                                                         # response_mime_type="application/json", response_schema=schema,
+                                                         audio_timestamp=True)
+                else:
+                    config = types.GenerateContentConfig(temperature=0,
+                                                         thinking_config=ThinkingConfig(
+                                                             thinking_level=ThinkingLevel.MINIMAL))
+                response = self._client.models.generate_content(
+                    model=self._model_name,
+                    contents=[prompt, audio_file],
+                    config=config
+                )
         finally:
             self._client.files.delete(name=audio_file.name)
 

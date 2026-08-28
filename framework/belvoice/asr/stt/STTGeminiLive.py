@@ -1,6 +1,7 @@
 import asyncio
 import os
 import wave
+from typing import Optional
 
 from google import genai
 from google.genai import types
@@ -27,11 +28,17 @@ class STTGeminiLive:
 
     CHUNK_FRAMES = 1600  # колькі "фрэймаў" WAV-файла адпраўляць у адным пакеце
     CHUNK_DELAY = 0.1
-    RESPONSE_TIMEOUT = 5.0  # секунд чакання наступнага паведамлення, пасля чаго лічым, што сервер больш нічога не дашле
+    RESPONSE_TIMEOUT = 8.0  # секунд чакання наступнага паведамлення, пасля чаго лічым, што сервер больш нічога не дашле
 
     PROMPT = "Аўдыя на беларускай мове. Транскрыбуй толькі гэты тэкст, без перакладу. Выкарыстоўвай ТОЛЬКІ беларускую мову."
 
-    def __init__(self, model_name: str = None, prompt: str = PROMPT) -> None:
+    def __init__(self, model_name: str = None, prompt: str = PROMPT,
+                 audio_transcription_config: Optional[types.AudioTranscriptionConfig] = None) -> None:
+        """
+        :param model_name:
+        :param prompt:
+        :param audio_transcription_config: перадаецца для мадэлі gemini-3.5-transcribe-live
+        """
         self._api_key = os.environ.get("GEMINI_API_KEY")
         if not self._api_key:
             raise Exception("Памылка: не ўстаноўлены GEMINI_API_KEY у якасці зменнай асяроддзя.")
@@ -39,6 +46,18 @@ class STTGeminiLive:
         self._model_name = model_name or self.MODEL_NAME
         self._client = genai.Client(api_key=self._api_key)
         self._prompt = prompt
+        if audio_transcription_config:
+            self._audio_transcription_config = audio_transcription_config
+            self._system_instruction = None
+        else:
+            self._audio_transcription_config = types.AudioTranscriptionConfig(
+                language_hints=LanguageHints(language_codes=["be"]))
+            self._system_instruction = types.Content(
+                parts=[types.Part(text=self._prompt)]
+            )
+        self._realtime_input_config = types.RealtimeInputConfig(
+            automatic_activity_detection=types.AutomaticActivityDetection(disabled=True),
+        )
 
     def transcript_file(self, audio_file_path: str, convert_to_format: str = "wav") -> str:
         """
@@ -73,13 +92,9 @@ class STTGeminiLive:
     async def _transcript_file_async(self, wav_file_path: str) -> str:
         config = types.LiveConnectConfig(
             response_modalities=[types.Modality.TEXT],
-            input_audio_transcription=types.AudioTranscriptionConfig(language_hints=LanguageHints(language_codes=["be"])),
-            system_instruction=types.Content(
-                parts=[types.Part(text=self._prompt)]
-            ),
-            realtime_input_config=types.RealtimeInputConfig(
-                automatic_activity_detection=types.AutomaticActivityDetection(disabled=True),
-            )
+            input_audio_transcription=self._audio_transcription_config,
+            system_instruction=self._system_instruction,
+            realtime_input_config=self._realtime_input_config
         )
 
         transcript_parts: list[str] = []
@@ -131,7 +146,6 @@ class STTGeminiLive:
                     input_transcription = server_content.input_transcription
                     if input_transcription and input_transcription.text:
                         transcript_parts.append(input_transcription.text)
-                        print(input_transcription)
                         last_useful_ts = loop.time()
 
                     if (
@@ -158,6 +172,8 @@ class STTGeminiLive:
         await session.send_realtime_input(activity_start=types.ActivityStart())
         with wave.open(file_path, 'rb') as wav_file:
             sample_rate = wav_file.getframerate()
+            sample_width = wav_file.getsampwidth()
+            n_channels = wav_file.getnchannels()
             while True:
                 chunk = wav_file.readframes(self.CHUNK_FRAMES)
                 if not chunk:
@@ -165,9 +181,17 @@ class STTGeminiLive:
                 await session.send_realtime_input(
                     audio=types.Blob(data=chunk, mime_type=f"audio/pcm;rate={sample_rate}")
                 )
-                await asyncio.sleep(self.CHUNK_DELAY)  # невялікая паўза, каб імітаваць стрымінг у рэальным часе
+                await asyncio.sleep(self.CHUNK_DELAY)
+
+        # дадаём ~2 сек цішыні, каб мадэль паспела дапрацаваць апошняе слова
+        silence_duration_sec = 2
+        silence_frames = int(sample_rate * silence_duration_sec)
+        silence_chunk = b"\x00" * (silence_frames * sample_width * n_channels)
+        await session.send_realtime_input(
+            audio=types.Blob(data=silence_chunk, mime_type=f"audio/pcm;rate={sample_rate}")
+        )
+        await asyncio.sleep(0.3)
 
         await session.send_realtime_input(activity_end=types.ActivityEnd())
+        await asyncio.sleep(0.3)  # дадатковая паўза перад канчатковым сігналам
         await session.send_realtime_input(audio_stream_end=True)
-        print("=============== file sent =====")
-

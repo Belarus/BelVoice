@@ -150,7 +150,7 @@
   Пакуль раім выкарыстоўваць gemini-3.1-flash-lite.
   Падтрымлівае файлы: wav, mp3, aiff, aac, ogg, opus, flac.
 * **Рэсурсы:** Патрабуецца знешні правайдэр.
-* **Залежнасці:** `pip install google-genai==2.13.0`, патрэбны `GEMINI_API_KEY` у пераменных асяроддзя.
+* **Залежнасці:** `pip install google-genai==2.20.0`, патрэбны `GEMINI_API_KEY` у пераменных асяроддзя.
 
 ### Распазнаванне маўлення - `belvoice.asr.stt.STTGeminiLive`
 
@@ -160,7 +160,7 @@
   Атрыманы тэкст можна перафарматоўваць праз нейкую простую мадэль.
   Падтрымлівае файлы: wav, mp3, aiff, aac, ogg, opus, flac.
 * **Рэсурсы:** Патрабуецца знешні правайдэр.
-* **Залежнасці:** `pip install google-genai==2.13.0`, патрэбны `GEMINI_API_KEY` у пераменных асяроддзя.
+* **Залежнасці:** `pip install google-genai==2.20.0`, патрэбны `GEMINI_API_KEY` у пераменных асяроддзя.
 
 ### Распазнаванне маўлення - `belvoice.asr.stt.STTWhisper`
 
