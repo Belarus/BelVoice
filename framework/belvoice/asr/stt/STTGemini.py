@@ -9,6 +9,9 @@ from google.genai.types import ThinkingConfig, ThinkingLevel
 
 from belvoice.asr.SplitData import VoiceFile, VoicePart
 
+"""
+gemini-3.5-transcribe: максімальная даўжыня - 1 гадзіна аўдыя, ці 30 хвілін калі выкарыстоўваецца diarization ці timestamps.
+"""
 
 class STTGemini:
     PROMPT = """
