@@ -1,0 +1,6 @@
+# Асобная ўстаноўка для навучання і выкарыстання мадэлі пастаноўкі націску.
+# Наўмысна не ў pyproject.toml/dependencies BelVoice - гэтая функцыянальнасць
+# апцыянальная (гл. tools/stress_ml/README.md).
+torch
+safetensors
+numpy

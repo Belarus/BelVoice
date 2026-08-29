@@ -1,7 +1,7 @@
-/.venv/
 .idea/
-/dist/
 __pycache__/
 target/
-/.project
 *.egg-info/
+/framework/belvoice/synth/stress/stresses-nohomographs.json
+/tools/stress_ml/.corpus_cache.pkl
+/tools/stress_ml/stress.list
