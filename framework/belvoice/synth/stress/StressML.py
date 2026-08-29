@@ -1,6 +1,7 @@
 import importlib.resources
 import json
 import re
+from collections.abc import Callable
 from pathlib import Path
 
 import torch
@@ -24,7 +25,10 @@ class StressML:
     (гл. tools/stress_ml/requirements.txt) - яны наўмысна не ў залежнасцях BelVoice.
     """
 
-    def __init__(self, weights_file=None, config_file=None):
+    def __init__(self,
+                 weights_file=None,
+                 config_file=None,
+                 callback: Callable[[float], None] | None = None):
         res_dir = importlib.resources.files('belvoice.synth.stress')
         weights_file = Path(weights_file) if weights_file else res_dir.joinpath('stress_ml.safetensors')
         config_file = Path(config_file) if config_file else res_dir.joinpath('stress_ml_config.json')
@@ -46,6 +50,7 @@ class StressML:
         state_dict = load_file(str(weights_file))
         self._model.load_state_dict(state_dict)
         self._model.eval()
+        self._callback = callback
 
     @torch.no_grad()
     def _predict_segment(self, segment: str):
@@ -104,10 +109,15 @@ class StressML:
     def apply_stresses(self, text: str) -> str:
         # Знаходзім усе беларускія словы ў тэксце
         matches = list(re.finditer(WORD_PATTERN, text, flags=re.IGNORECASE))
+        if not matches:
+            if self._callback:
+                self._callback(100.0)
+            return text
 
+        total_words = len(matches)
         result = ""
         last_end = 0
-        for match in matches:
+        for i, match in enumerate(matches):
             word = match.group()
             # Дадаём у выніковы тэкст усё, што было паміж папярэднім і бягучым словам
             result += text[last_end:match.start()]
@@ -121,8 +131,10 @@ class StressML:
             stressed, _confidence = self.process_word(word)
             result += stressed
 
+            if self._callback:
+                self._callback((i + 1) / total_words * 100.0)
+
         # Дадаём хвост тэксту пасля апошняга знойдзенага слова
         result += text[last_end:]
 
         return result
-
