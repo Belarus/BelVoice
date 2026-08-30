@@ -27,37 +27,35 @@ class TTSOmniVoice:
     """
 
     def __init__(self,
-                 callback: Callable[[float], None] | None = None,
                  split_sentences: bool = False
                  ):
         self._model = OmniVoice.from_pretrained("k2-fsa/OmniVoice")
-        self._callback = callback
         self._split_sentences = split_sentences
         self._voice_prompt = self._model.create_voice_clone_prompt(
             ref_audio=_REF_AUDIO,
             ref_text=_REF_TEXT
         )
 
-    def tts(self, text: str, output_file: str):
+    def tts(self, text: str, output_file: str, callback: Callable[[float], None] | None = None):
         if not self._split_sentences:
             self._synthesize(text, output_file)
-            if self._callback:
-                self._callback(100.0)
+            if callback:
+                callback(100.0)
             return
 
         sentences = [m.group() for m in _SENTENCE_PATTERN.finditer(text)] if text else []
 
         total_len = len(text)
         if total_len == 0 or not any(s.strip() for s in sentences):
-            if self._callback:
-                self._callback(100.0)
+            if callback:
+                callback(100.0)
             return
 
         sentence_files = []
         processed_len = 0
         try:
-            if self._callback:
-                self._callback(0.0)
+            if callback:
+                callback(0.0)
             for i, sentence in enumerate(sentences):
                 processed_len += len(sentence)
 
@@ -66,8 +64,8 @@ class TTSOmniVoice:
                     self._synthesize(sentence, sentence_file)
                     sentence_files.append(sentence_file)
 
-                if self._callback:
-                    self._callback(processed_len / total_len * 100.0)
+                if callback:
+                    callback(processed_len / total_len * 100.0)
 
             self._concat_wavs(sentence_files, output_file)
         finally:

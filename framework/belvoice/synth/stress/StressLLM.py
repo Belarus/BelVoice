@@ -40,14 +40,12 @@ CRITICAL FORMATTING RULES:
     def __init__(self, model_name: str,
                  requests_file: str = importlib.resources.files('belvoice.synth.stress').joinpath("stresses-grammar_optimized.md"),
                  reasoning_effort: str = None,
-                 extra_body: dict = None,
-                 callback: Callable[[float], None] | None = None):
+                 extra_body: dict = None):
         with requests_file.open('r', encoding='utf-8') as md_file:
             self._stresses_prompts, self._stresses_variants = self._load_optimized(md_file)
         self._model_name = model_name
         self._reasoning_effort = reasoning_effort
         self._extra_body = extra_body if extra_body else {}
-        self._callback = callback
 
     def _parse_variants(self, header) -> (str, dict):
         parts = header.lstrip('#').split(';')
@@ -92,12 +90,12 @@ CRITICAL FORMATTING RULES:
 
         return result_prompts, result_variants
 
-    def apply_stresses(self, text: str) -> str:
+    def apply_stresses(self, text: str, callback: Callable[[float], None] | None = None) -> str:
         # Знаходзім усе беларускія словы ў тэксце
         matches = list(re.finditer(WORD_PATTERN, text, flags=re.IGNORECASE))
         if not matches:
-            if self._callback:
-                self._callback(100.0)
+            if callback:
+                callback(100.0)
             return text
 
         total_words = len(matches)
@@ -142,8 +140,8 @@ CRITICAL FORMATTING RULES:
                         # 3. Захоўваем канчатковы варыянт (калі LLM не змагла адказаць - пакідаем зыходнае слова)
                         result += word_match_case(word, new_word) if new_word else word
 
-            if self._callback:
-                self._callback((i + 1) / total_words * 100.0)
+            if callback:
+                callback((i + 1) / total_words * 100.0)
 
         # Дадаём хвост тэксту пасля апошняга знойдзенага слова
         result += text[last_end:]

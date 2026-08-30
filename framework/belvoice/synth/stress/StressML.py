@@ -27,8 +27,7 @@ class StressML:
 
     def __init__(self,
                  weights_file=None,
-                 config_file=None,
-                 callback: Callable[[float], None] | None = None):
+                 config_file=None):
         res_dir = importlib.resources.files('belvoice.synth.stress')
         weights_file = Path(weights_file) if weights_file else res_dir.joinpath('stress_ml.safetensors')
         config_file = Path(config_file) if config_file else res_dir.joinpath('stress_ml_config.json')
@@ -50,7 +49,6 @@ class StressML:
         state_dict = load_file(str(weights_file))
         self._model.load_state_dict(state_dict)
         self._model.eval()
-        self._callback = callback
 
     @torch.no_grad()
     def _predict_segment(self, segment: str):
@@ -106,12 +104,12 @@ class StressML:
                 confidences.append(confidence)
         return '-'.join(out_parts), (min(confidences) if confidences else 1.0)
 
-    def apply_stresses(self, text: str) -> str:
+    def apply_stresses(self, text: str, callback: Callable[[float], None] | None = None) -> str:
         # Знаходзім усе беларускія словы ў тэксце
         matches = list(re.finditer(WORD_PATTERN, text, flags=re.IGNORECASE))
         if not matches:
-            if self._callback:
-                self._callback(100.0)
+            if callback:
+                callback(100.0)
             return text
 
         total_words = len(matches)
@@ -131,8 +129,8 @@ class StressML:
             stressed, _confidence = self.process_word(word)
             result += stressed
 
-            if self._callback:
-                self._callback((i + 1) / total_words * 100.0)
+            if callback:
+                callback((i + 1) / total_words * 100.0)
 
         # Дадаём хвост тэксту пасля апошняга знойдзенага слова
         result += text[last_end:]
