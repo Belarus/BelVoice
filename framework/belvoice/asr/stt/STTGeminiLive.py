@@ -15,48 +15,42 @@ class STTGeminiLive:
     Транскрыпцыя аўдыяфайла праз Gemini Live API (рэжым рэальнага часу), выкарыстоўваючы
     афіцыйную бібліятэку google-genai напрамую (без litellm).
 
-    Патрабуецца ўсталяваць бібліятэку: pip install google-genai
+    gemini-3.5-transcribe-live: максімальная даўжыня - 10 хвілін.
+    Manual VAD (Push-to-Talk) працуе так: ён вяртае generation_complete=True
+    калі перадалі audio_stream_end=True, але такім чынам можна даслаць недзе не больш за 3 хвіліны аўдыя,
+    пасля чаго мадэль вяртае generation_complete=True незалежна ад audio_stream_end.
+    Калі выключыць Manual VAD, мадэль будзе дасылаць generation_complete=True на паўзах, і трэба чакаць заканчэння па timeout.
 
-    Мадэль па змаўчанні - "gemini-3.5-live-translate-preview". Нягледзячы на назву мадэлі
-    (яна прызначана таксама і для перакладу), тут выкарыстоўваецца толькі яе ўбудаваная
-    функцыя транскрыпцыі ўваходнага аўдыя (input_audio_transcription), таму НІЯКАГА
-    перакладу ці генерацыі адказу мадэллю не адбываецца - мова транскрыпту застаецца
-    такой жа, як і мова зыходнага аўдыя (беларуская).
-
-    gemini-3.5-transcribe-live: максімальная даўжыня - 10 хвілін, але больш за 5 хвілін не працуе.
+    gemini-3.5-live-translate-preview: яе таксама можна было б выкарыстоўваць для транскрыпта,
+    але мадэль мае некалькі істотных мінусаў:
+     - якасць распазнавання горшая за gemini-3.5-transcribe-live,
+     - перадае часам  interrupted=True
+     - не ўлічвае audio_stream_end=True, то бок трэба неяк выкручвацца для дэтэкта канца аўдыя
+     - перадае аўдыя ў адказ, што павялічвае трафік
+    З улікам гэтых недахопаў і таго, што яе кошт і бясплатныя ліміты не большыя за gemini-3.5-transcribe-live, яе не варта выкарыстоўваць.
     """
-
-    MODEL_NAME = "gemini-3.5-live-translate-preview"
 
     CHUNK_FRAMES = 1600  # колькі "фрэймаў" WAV-файла адпраўляць у адным пакеце
     CHUNK_DELAY = 0.1
-    RESPONSE_TIMEOUT = 8.0  # секунд чакання наступнага паведамлення, пасля чаго лічым, што сервер больш нічога не дашле
+    RESPONSE_TIMEOUT = 10.0  # секунд чакання наступнага паведамлення / generation_complete пасля адпраўкі аўдыя
+    SILENCE_DURATION_AFTER_S = 2.0  # секунд маўчання пасля аўдыя
 
-    PROMPT = "Аўдыя на беларускай мове. Транскрыбуй толькі гэты тэкст, без перакладу. Выкарыстоўвай ТОЛЬКІ беларускую мову."
-
-    def __init__(self, model_name: str = None, prompt: str = PROMPT,
+    def __init__(self,
+                 model_name: str = "gemini-3.5-transcribe-live",
                  audio_transcription_config: Optional[types.AudioTranscriptionConfig] = None) -> None:
-        """
-        :param model_name:
-        :param prompt:
-        :param audio_transcription_config: перадаецца для мадэлі gemini-3.5-transcribe-live
-        """
         self._api_key = os.environ.get("GEMINI_API_KEY")
         if not self._api_key:
             raise Exception("Памылка: не ўстаноўлены GEMINI_API_KEY у якасці зменнай асяроддзя.")
 
-        self._model_name = model_name or self.MODEL_NAME
+        self._model_name = model_name
         self._client = genai.Client(api_key=self._api_key)
-        self._prompt = prompt
+
         if audio_transcription_config:
             self._audio_transcription_config = audio_transcription_config
-            self._system_instruction = None
         else:
             self._audio_transcription_config = types.AudioTranscriptionConfig(
                 language_hints=LanguageHints(language_codes=["be"]))
-            self._system_instruction = types.Content(
-                parts=[types.Part(text=self._prompt)]
-            )
+
         self._realtime_input_config = types.RealtimeInputConfig(
             automatic_activity_detection=types.AutomaticActivityDetection(disabled=True),
         )
@@ -95,12 +89,12 @@ class STTGeminiLive:
         config = types.LiveConnectConfig(
             response_modalities=[types.Modality.TEXT],
             input_audio_transcription=self._audio_transcription_config,
-            system_instruction=self._system_instruction,
             realtime_input_config=self._realtime_input_config
         )
 
         transcript_parts: list[str] = []
         loop = asyncio.get_event_loop()
+        generation_completed = False
 
         async with self._client.aio.live.connect(model=self._model_name, config=config) as session:
             # запускаем адпраўку файла як асобную задачу, каб прыём адказаў ад сервера
@@ -125,21 +119,28 @@ class STTGeminiLive:
 
                         remaining = self.RESPONSE_TIMEOUT - (loop.time() - last_useful_ts)
                         if remaining <= 0:
-                            # даўно не было нічога карыснага - лічым транскрыпцыю завершанай
-                            break
+                            raise TimeoutError(
+                                f"Таймаут ({self.RESPONSE_TIMEOUT} с): сервер не вярнуў generation_complete=True пасля адпраўкі аўдыя."
+                            )
 
                         try:
                             response = await asyncio.wait_for(receiver.__anext__(), timeout=remaining)
                         except StopAsyncIteration:
-                            break
+                            raise RuntimeError(
+                                "Злучэнне закрылася датэрмінова да атрымання generation_complete=True."
+                            )
                         except asyncio.TimeoutError:
-                            break
+                            raise TimeoutError(
+                                f"Таймаут ({self.RESPONSE_TIMEOUT} с): сервер не вярнуў generation_complete=True пасля адпраўкі аўдыя."
+                            )
                     else:
                         # адпраўка яшчэ не завершана - чакаем наступнае паведамленне без таймауту
                         try:
                             response = await receiver.__anext__()
                         except StopAsyncIteration:
-                            break
+                            raise RuntimeError(
+                                "Злучэнне закрылася датэрмінова падчас адпраўкі аўдыя (не атрымана generation_complete=True)."
+                            )
 
                     server_content = response.server_content
                     if server_content is None:
@@ -150,14 +151,19 @@ class STTGeminiLive:
                         transcript_parts.append(input_transcription.text)
                         last_useful_ts = loop.time()
 
+                    if server_content.generation_complete:
+                        generation_completed = True
+                        break
+
                     if (
                             server_content.turn_complete
-                            or server_content.generation_complete
                             or server_content.turn_complete_reason is not None
                             or server_content.waiting_for_input
                     ):
-                        break
-                    # усе іншыя паведамленні (напр. model_turn з audio-цішынёй) НЕ скідаюць таймаут
+                        raise RuntimeError(f"Нечаканы server_content: {server_content}")
+
+                if not generation_completed:
+                    raise RuntimeError("Транскрыпцыя завершана без атрымання generation_complete=True.")
             finally:
                 # калі прыём завяршыўся раней, чым адпраўка (напр. з-за таймаута),
                 # усё роўна дачакаемся/скасуем задачу адпраўкі і пракінем яе памылкі, калі яны былі
@@ -186,8 +192,7 @@ class STTGeminiLive:
                 await asyncio.sleep(self.CHUNK_DELAY)
 
         # дадаём ~2 сек цішыні, каб мадэль паспела дапрацаваць апошняе слова
-        silence_duration_sec = 2
-        silence_frames = int(sample_rate * silence_duration_sec)
+        silence_frames = int(sample_rate * self.SILENCE_DURATION_AFTER_S)
         silence_chunk = b"\x00" * (silence_frames * sample_width * n_channels)
         await session.send_realtime_input(
             audio=types.Blob(data=silence_chunk, mime_type=f"audio/pcm;rate={sample_rate}")

@@ -126,6 +126,12 @@ class StressML:
                 result += word
                 continue
 
+            # слова з адным складам (0 ці 1 галосная) — няма сэнсу вызначаць націск
+            vowel_count = sum(1 for ch in word.lower() if ch in VOWELS)
+            if vowel_count <= 1:
+                result += word
+                continue
+
             stressed, _confidence = self.process_word(word)
             result += stressed
 

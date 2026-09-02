@@ -70,7 +70,7 @@ class STTGemini:
 
     def __init__(self, model_name: str, prompt: str = None,
                  thinking_level: Optional[Literal["none", "minimal", "low", "medium", "high"]] = "none",
-                 audio_transcription_config: Optional[types.AudioTranscriptionConfig] = None) -> None:
+                 audio_transcription_config: dict = None) -> None:
         if os.environ.get("GEMINI_API_KEY") is None:
             raise Exception("Памылка: не ўстаноўлены GEMINI_API_KEY у якасці зменнай асяроддзя.")
 
@@ -114,7 +114,12 @@ class STTGemini:
         finally:
             os.remove(temp_file)
 
-        segment.text = response.text
+        if hasattr(response, 'text') and response.text:
+            segment.text = response.text
+        elif hasattr(response, 'output_text') and response.output_text:
+            segment.text = response.output_text
+        else:
+            segment.text = None
 
     def transcript_parts_with_timestamps(self, data: VoiceFile, segment_processed_callback=None) -> None:
         """
@@ -155,10 +160,10 @@ class STTGemini:
             if self._audio_transcription_config:
                 response = self._client.interactions.create(
                     model=self._model_name,
-                    input=audio_file,
-                    config=types.GenerateContentConfig(
-                        audio_transcription_config=self._audio_transcription_config
-                    )
+                    input=[{"type": "audio", "uri": audio_file.uri, "mime_type": audio_file.mime_type}],
+                    generation_config={
+                        "transcription_config": self._audio_transcription_config
+                    }
                 )
             else:
                 if schema:

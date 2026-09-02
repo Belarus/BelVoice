@@ -6,7 +6,7 @@ from belvoice.asr.SplitData import VoiceFile, VoicePart
 class MergeGraph:
     """
     Разглядаем сегменты як граф, дзе рэбры паміж вузламі існуюць, калі адлегласць
-    паміж імі менш за max_segment_duration.
+    паміж імі менш за max_segment_duration_s.
 
     Аптымальныя межы кавалакаў для ацэнкі працягласці разлічваюцца па сярэдзіне паўз,
     але выніковыя сегменты захоўваюць дакладныя межы маўлення зыходных сегментаў.
@@ -16,12 +16,12 @@ class MergeGraph:
     MIN_EDGE_WEIGHT = 1.0  # Мінімальная вага рабра
 
     def __init__(self,
-                 max_segment_duration: float = 10 * 60
+                 max_segment_duration_s: float = 10 * 60
                  ):
         """
-        :param max_segment_duration: максімальная даўжыня сегмента пасля merge
+        :param max_segment_duration_s: максімальная даўжыня сегмента пасля merge
         """
-        self.max_segment_duration = max_segment_duration
+        self.max_segment_duration_s = max_segment_duration_s
 
     def _get_cut_point(self, idx: int, data: VoiceFile, n: int) -> float:
         """
@@ -55,7 +55,7 @@ class MergeGraph:
                 duration = end_time - start_time
 
                 # Абмяжоўваем даўжыню, захоўваючы сувязнасць графу
-                if duration > self.max_segment_duration and j > i + 1:
+                if duration > self.max_segment_duration_s and j > i + 1:
                     break
 
                 # Паўза пасля сегмента j для функцыі штрафу
@@ -64,7 +64,7 @@ class MergeGraph:
                     pause_after = data.segments[j + 1].start - data.segments[j].end
 
                 # Функцыя кошту рабра
-                edge_weight = self.FIXED_ASR_COST - (pause_after * 50) + (self.max_segment_duration - duration)
+                edge_weight = self.FIXED_ASR_COST - (pause_after * 50) + (self.max_segment_duration_s - duration)
 
                 G.add_edge(i, j, weight=max(self.MIN_EDGE_WEIGHT, edge_weight))
 
