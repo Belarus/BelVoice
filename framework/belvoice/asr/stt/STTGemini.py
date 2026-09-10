@@ -5,7 +5,7 @@ from typing import Optional, Literal
 
 from google import genai
 from google.genai import types
-from google.genai.types import ThinkingConfig, ThinkingLevel
+from google.genai.types import ThinkingConfig
 
 from belvoice.asr.SplitData import VoiceFile, VoicePart
 
@@ -173,7 +173,7 @@ class STTGemini:
                 else:
                     config = types.GenerateContentConfig(temperature=0,
                                                          thinking_config=ThinkingConfig(
-                                                             thinking_level=ThinkingLevel.MINIMAL))
+                                                             thinking_level=self._thinking_level))
                 response = self._client.models.generate_content(
                     model=self._model_name,
                     contents=[prompt, audio_file],

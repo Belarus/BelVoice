@@ -1,5 +1,6 @@
-import numpy
 import subprocess
+
+import numpy
 import torch
 from silero_vad import load_silero_vad, get_speech_timestamps
 
@@ -11,66 +12,77 @@ class SplitSileroVAD:
     Разбівае аўдыяфайл на часткі, якія ўтрымліваюць маўленне, выкарыстоўваючы мадэль SileroVAD.
     """
 
-    def __init__(self):
-        self._model = load_silero_vad()
-
-    def split(self, audio_file_path: str,
-              threshold: float = 0.5,
-              min_speech_duration_ms: int = 250,
-              max_speech_duration_s: float = float('inf'),
-              min_silence_duration_ms: int = 100,
-              speech_pad_ms: int = 30,
-              visualize_probs: bool = False,
-              neg_threshold: float = None,
-              min_silence_at_max_speech: int = 98,
-              use_max_poss_sil_at_max_speech: bool = True
-              ) -> VoiceFile:
+    def __init__(self,
+                 threshold: float = 0.5,
+                 min_speech_duration_ms: int = 250,
+                 max_speech_duration_s: float = float('inf'),
+                 min_silence_duration_ms: int = 100,
+                 speech_pad_ms: int = 30,
+                 visualize_probs: bool = False,
+                 neg_threshold: float = None,
+                 min_silence_at_max_speech: int = 98,
+                 use_max_poss_sil_at_max_speech: bool = True
+                 ):
         """
-            Аўдыё можа быць у любым фармаце, які падтрымлівае ffmpeg.
-            Параметры з Silero VAD:
-            -----------------------
-            threshold: float (default - 0.5)
-                Speech threshold. Silero VAD outputs speech probabilities for each audio chunk, probabilities ABOVE this value are considered as SPEECH.
-                It is better to tune this parameter for each dataset separately, but "lazy" 0.5 is pretty good for most datasets.
+        Параметры Silero VAD:
+        -----------------------
+        threshold: float (default - 0.5)
+            Speech threshold. Silero VAD outputs speech probabilities for each audio chunk, probabilities ABOVE this value are considered as SPEECH.
+            It is better to tune this parameter for each dataset separately, but "lazy" 0.5 is pretty good for most datasets.
 
-            min_speech_duration_ms: int (default - 250 milliseconds)
-                Final speech chunks shorter min_speech_duration_ms are thrown out
+        min_speech_duration_ms: int (default - 250 milliseconds)
+            Final speech chunks shorter min_speech_duration_ms are thrown out
 
-            max_speech_duration_s: int (default -  inf)
-                Maximum duration of speech chunks in seconds
-                Chunks longer than max_speech_duration_s will be split at the timestamp of the last silence that lasts more than 100ms (if any), to prevent aggressive cutting.
-                Otherwise, they will be split aggressively just before max_speech_duration_s.
+        max_speech_duration_s: int (default -  inf)
+            Maximum duration of speech chunks in seconds
+            Chunks longer than max_speech_duration_s will be split at the timestamp of the last silence that lasts more than 100ms (if any), to prevent aggressive cutting.
+            Otherwise, they will be split aggressively just before max_speech_duration_s.
 
-            min_silence_duration_ms: int (default - 100 milliseconds)
-                In the end of each speech chunk wait for min_silence_duration_ms before separating it
+        min_silence_duration_ms: int (default - 100 milliseconds)
+            In the end of each speech chunk wait for min_silence_duration_ms before separating it
 
-            speech_pad_ms: int (default - 30 milliseconds)
-                Final speech chunks are padded by speech_pad_ms each side
+        speech_pad_ms: int (default - 30 milliseconds)
+            Final speech chunks are padded by speech_pad_ms each side
 
-            visualize_probs: bool (default - False)
-                whether draw prob hist or not
+        visualize_probs: bool (default - False)
+            whether draw prob hist or not
 
-            neg_threshold: float (default = threshold - 0.15)
-                Negative threshold (noise or exit threshold). If model's current state is SPEECH, values BELOW this value are considered as NON-SPEECH.
+        neg_threshold: float (default = threshold - 0.15)
+            Negative threshold (noise or exit threshold). If model's current state is SPEECH, values BELOW this value are considered as NON-SPEECH.
 
-            min_silence_at_max_speech: int (default - 98ms)
-                Minimum silence duration in ms which is used to avoid abrupt cuts when max_speech_duration_s is reached
+        min_silence_at_max_speech: int (default - 98ms)
+            Minimum silence duration in ms which is used to avoid abrupt cuts when max_speech_duration_s is reached
 
-            use_max_poss_sil_at_max_speech: bool (default - True)
-                Whether to use the maximum possible silence at max_speech_duration_s or not. If not, the last silence is used.
-            """
+        use_max_poss_sil_at_max_speech: bool (default - True)
+            Whether to use the maximum possible silence at max_speech_duration_s or not. If not, the last silence is used.
+        """
+        self._model = load_silero_vad()
+        self._threshold = threshold
+        self._min_speech_duration_ms = min_speech_duration_ms
+        self._max_speech_duration_s = max_speech_duration_s
+        self._min_silence_duration_ms = min_silence_duration_ms
+        self._speech_pad_ms = speech_pad_ms
+        self._visualize_probs = visualize_probs
+        self._neg_threshold = neg_threshold
+        self._min_silence_at_max_speech = min_silence_at_max_speech
+        self._use_max_poss_sil_at_max_speech = use_max_poss_sil_at_max_speech
+
+    def split(self, audio_file_path: str) -> VoiceFile:
+        """
+        Аўдыё можа быць у любым фармаце, які падтрымлівае ffmpeg.
+        """
         wav = self._read_audio(audio_file_path)
         timestamps = get_speech_timestamps(wav, self._model, return_seconds=True,
                                            time_resolution=3,
-                                           threshold=threshold,
-                                           min_speech_duration_ms=min_speech_duration_ms,
-                                           max_speech_duration_s=max_speech_duration_s,
-                                           min_silence_duration_ms=min_silence_duration_ms,
-                                           speech_pad_ms=speech_pad_ms,
-                                           visualize_probs=visualize_probs,
-                                           neg_threshold=neg_threshold,
-                                           min_silence_at_max_speech=min_silence_at_max_speech,
-                                           use_max_poss_sil_at_max_speech=use_max_poss_sil_at_max_speech)
+                                           threshold=self._threshold,
+                                           min_speech_duration_ms=self._min_speech_duration_ms,
+                                           max_speech_duration_s=self._max_speech_duration_s,
+                                           min_silence_duration_ms=self._min_silence_duration_ms,
+                                           speech_pad_ms=self._speech_pad_ms,
+                                           visualize_probs=self._visualize_probs,
+                                           neg_threshold=self._neg_threshold,
+                                           min_silence_at_max_speech=self._min_silence_at_max_speech,
+                                           use_max_poss_sil_at_max_speech=self._use_max_poss_sil_at_max_speech)
         data = VoiceFile(audio_file_path)
         data.segments = [VoicePart(start=item['start'], end=item['end']) for item in timestamps]
         return data

@@ -17,7 +17,13 @@ class SplitPyannote:
     выяўлена параўнаннем файлаў. Таму, для простай сегментацыі без спікераў лепш выкарыстоўваць яе.
     """
 
-    def __init__(self, segmentation_only=True):
+    def __init__(self,
+                 segmentation_only=True,
+                 onset: float = 0.45,  # аптымальны стандартны парог для выяўлення сувязнага маўлення
+                 offset: float = 0.30, # крыху больш нізкі парог для заканчэння, каб не абразаць ціхія канчаткі слоў ці згасанне спеваў,
+                 min_duration_on: float = 0.05,  # не ствараць фрагменты карацейшыя за 0.05 сек
+                 min_duration_off: float = 0.7  # аб'ядноўваць кавалкі, паміж якімі паўзы карацейшыя за 0.7 сек
+                 ):
         self._segmentation_only = segmentation_only
         if self._segmentation_only:
             # 1. Загружаем толькі мадэль сегментацыі
@@ -27,11 +33,11 @@ class SplitPyannote:
             self._pipeline = VoiceActivityDetection(segmentation=self._model)
             # 3. Наладжваем параметры (парогі і мінімальную працягласць)
             # Налады дэтэкцыі (onset / offset)
-            self._pipeline.onset = 0.45  # пакідаем аптымальны стандартны парог для выяўлення сувязнага маўлення
-            self._pipeline.offset = 0.30  # крыху больш нізкі парог для заканчэння, каб не абразаць ціхія канчаткі слоў ці згасанне спеваў
+            self._pipeline.onset = onset
+            self._pipeline.offset = offset
             HYPER_PARAMETERS = {
-                "min_duration_on": 0.05,  # не ствараць фрагменты карацейшыя за 0.05 сек
-                "min_duration_off": 0.7  # аб'ядноўваць паўзы, карацейшыя за 0.7 сек
+                "min_duration_on": min_duration_on,
+                "min_duration_off": min_duration_off
             }
             self._pipeline.instantiate(HYPER_PARAMETERS)
         else:
