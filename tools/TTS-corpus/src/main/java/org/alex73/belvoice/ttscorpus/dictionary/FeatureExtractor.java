@@ -12,7 +12,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Вымае фанетычныя прыкметы (diphone, triphone, phonetic rules) з фанетычнай транскрыпцыі.
+ * Вымае фанетычныя прыкметы (diphone, triphone, phonetic rules) з фанетычнай транскрыпцыі
+ * і графіка-тэкставыя n-грамы (digraph, trigraph) з тэксту слоў.
  *
  * TODO: перарабіць вызначэнне фанетычных правілаў з BelG2P
  */
@@ -21,10 +22,20 @@ public final class FeatureExtractor {
     }
 
     /**
-     * Extracts all features (diphones, triphones, phonetic rules) from a phonetic result into WordData.
+     * Extracts all features (digraphs, trigraphs, diphones, triphones, phonetic rules) into WordData.
      */
     public static void fillFeatures(WordData data, G2PService.PhoneticResult r) {
-        byte[] tokens= TokenStr.str2tokens(r.transcription());
+        if (data.words() != null) {
+            List<String> digraphs = textWindows(data.words(), 2);
+            if (!digraphs.isEmpty()) {
+                data.setDigraph(String.join(";", digraphs));
+            }
+            List<String> trigraphs = textWindows(data.words(), 3);
+            if (!trigraphs.isEmpty()) {
+                data.setTrigraph(String.join(";", trigraphs));
+            }
+        }
+        byte[] tokens = TokenStr.str2tokens(r.transcription());
         data.setPhoneticTranscription(r.transcription());
         List<String> diphones = windows(tokens, 2);
         if (!diphones.isEmpty()) {
@@ -38,6 +49,39 @@ public final class FeatureExtractor {
             Set<String> rules = new LinkedHashSet<>(r.rules());
             data.setPhoneticRule(String.join(";", rules));
         }
+    }
+
+    /**
+     * Выбірае n-грамы літар (дыграфы, трыграфы) з тэксту.
+     * Прабелы і камбінаваныя знакі захоўваюцца ў выніковым радку, але не ўлічваюцца пры падліку.
+     */
+    static List<String> textWindows(String text, int n) {
+        if (text == null || n <= 0) {
+            return Collections.emptyList();
+        }
+        String lower = text.toLowerCase();
+        List<String> result = new ArrayList<>();
+        for (int i = 0; i < lower.length(); i++) {
+            if (lower.charAt(i) == ' ' || lower.charAt(i)=='\u0301') { // combining acute accent
+                continue;
+            }
+            int count = 0;
+            int j = i;
+            while (j < lower.length() && count < n) {
+                char c = lower.charAt(j);
+                if (c != ' ' && c != '\u0301') { // combining acute accent
+                    count++;
+                }
+                j++;
+            }
+            if (count == n) {
+                while (j < lower.length() && lower.charAt(j) == '\u0301') { // combining acute accent
+                    j++;
+                }
+                result.add(lower.substring(i, j));
+            }
+        }
+        return result;
     }
 
     /**

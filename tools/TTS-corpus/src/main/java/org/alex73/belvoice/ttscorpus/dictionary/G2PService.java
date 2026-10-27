@@ -17,9 +17,6 @@ import java.util.regex.Pattern;
  * Thread-safe wrapper over BelG2P: new Fanetyka3 is created for each call.
  */
 public class G2PService {
-    private static final Pattern RULE = Pattern
-            .compile("<b>\\d+\\.</b> <b>([^<]+)</b>: \\[[^\\]]*\\]\\. ([^;<]*);");
-
     private static final VoiceToStringTTS HUK2STR = new VoiceToStringTTS();
 
     private final FanetykaConfig config;

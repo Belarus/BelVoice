@@ -100,7 +100,7 @@ public class TokenStr {
                 }
             }
             if (!found) {
-                throw new IllegalArgumentException("Unknown token in string: " + s.substring(i));
+                throw new IllegalArgumentException("Unknown token in string: " + s.substring(i)+" full string: "+s);
             }
         }
         return tokens.toByteArray();

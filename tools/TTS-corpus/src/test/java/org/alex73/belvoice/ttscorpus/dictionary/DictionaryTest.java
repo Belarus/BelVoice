@@ -41,9 +41,29 @@ class DictionaryTest {
         G2PService.PhoneticResult r = new G2PService.PhoneticResult("аб вг", List.of("R: x"));
         WordData data = new WordData("аб вг");
         FeatureExtractor.fillFeatures(data, r);
+        assertEquals("аб;б в;вг", data.digraph());
+        assertEquals("аб в;б вг", data.trigraph());
         assertEquals("аб;б в;вг", data.diphone());
         assertEquals("аб в;б вг", data.triphone());
         assertEquals("R: x", data.phoneticRule());
+    }
+
+    @Test
+    void textWindows() {
+        List<String> d = FeatureExtractor.textWindows("рака аблокі", 2);
+        assertEquals(List.of("ра", "ак", "ка", "а а", "аб", "бл", "ло", "ок", "кі"), d);
+
+        List<String> tr = FeatureExtractor.textWindows("рака аблокі", 3);
+        assertEquals(List.of("рак", "ака", "ка а", "а аб", "абл", "бло", "лок", "окі"), tr);
+    }
+
+    @Test
+    void textWindowsWithStressMark() {
+        List<String> d = FeatureExtractor.textWindows("до\u0301ждж спрэ\u0301чка", 2);
+        assertEquals(List.of("до\u0301", "о\u0301ж", "жд", "дж", "ж с", "сп", "пр", "рэ\u0301", "э\u0301ч", "чк", "ка"), d);
+
+        List<String> tr = FeatureExtractor.textWindows("до\u0301ждж спрэ\u0301чка", 3);
+        assertEquals(List.of("до\u0301ж", "о\u0301жд", "ждж", "дж с", "ж сп", "спр", "прэ\u0301", "рэ\u0301ч", "э\u0301чк", "чка"), tr);
     }
 
     @Test
@@ -63,19 +83,15 @@ class DictionaryTest {
     }
 
     @Test
-    void parseRules() {
-        String dump = "<b>Фанетычныя змены:</b><br>\n<b>1.</b> <b>Мяккасць</b>: [н -> нь]. асіміляцыйнае змякчэнне н; <span style='color: #663300'>a => b</span><br>\n";
-        assertEquals(List.of("Мяккасць: асіміляцыйнае змякчэнне н"), G2PService.parseRules(dump));
-    }
-
-    @Test
     void storeRoundTrip(@TempDir Path dir) throws Exception {
         Dictionary d = new Dictionary();
         Feature f1 = new Feature(FeatureType.DIPHONE, "a-b");
         Feature f2 = new Feature(FeatureType.DIPHONE, "b-c");
         Feature fb = new Feature(FeatureType.DIPHONE, "b|b");
-        d.words.put("аб", Map.of(FeatureType.DIPHONE, "a-b;b-c"));
-        d.words.put("аб ба", Map.of(FeatureType.DIPHONE, "b|b"));
+        Feature fd = new Feature(FeatureType.DIGRAPH, "аб");
+        Feature ft = new Feature(FeatureType.TRIGRAPH, "абв");
+        d.words.put("аб", Map.of(FeatureType.DIPHONE, "a-b;b-c", FeatureType.DIGRAPH, "аб"));
+        d.words.put("аб ба", Map.of(FeatureType.DIPHONE, "b|b", FeatureType.TRIGRAPH, "абв"));
         Path file = dir.resolve("dictionary.tsv");
         DictionaryStore.save(d, file);
         Dictionary l = DictionaryStore.load(file);
@@ -83,6 +99,8 @@ class DictionaryTest {
         assertEquals(List.of("аб"), l.invertedIndex.get(f1));
         assertEquals(List.of("аб"), l.invertedIndex.get(f2));
         assertEquals(List.of("аб ба"), l.invertedIndex.get(fb));
+        assertEquals(List.of("аб"), l.invertedIndex.get(fd));
+        assertEquals(List.of("аб ба"), l.invertedIndex.get(ft));
     }
 
     @Test
@@ -103,9 +121,9 @@ class DictionaryTest {
 
         List<String> lines = java.nio.file.Files.readAllLines(file);
         assertEquals(DictionaryBuilder.HEADER, lines.get(0));
-        assertTrue(lines.contains("\tрака\tаб\tаб\t\t"));
-        assertTrue(lines.contains("\tаблокі\tаб\tаб\t\t"));
-        assertTrue(lines.contains("а а\tрака аблокі\tаб в\tаб;б в\tаб в\tRule: boundary"));
+        assertTrue(lines.contains("\tрака\tаб\tра;ак;ка\tрак;ака\tаб\t\t"));
+        assertTrue(lines.contains("\tаблокі\tаб\tаб;бл;ло;ок;кі\tабл;бло;лок;окі\tаб\t\t"));
+        assertTrue(lines.contains("а а\tрака аблокі\tаб в\tра;ак;ка;а а;аб;бл;ло;ок;кі\tрак;ака;ка а;а аб;абл;бло;лок;окі\tаб;б в\tаб в\tRule: boundary"));
 
         Dictionary dict = DictionaryStore.load(file);
         assertTrue(dict.words.containsKey("рака"));
@@ -114,6 +132,8 @@ class DictionaryTest {
 
         Map<FeatureType, String> pairFeatures = dict.words.get("рака аблокі");
         assertNotNull(pairFeatures);
+        assertEquals("ра;ак;ка;а а;аб;бл;ло;ок;кі", pairFeatures.get(FeatureType.DIGRAPH));
+        assertEquals("рак;ака;ка а;а аб;абл;бло;лок;окі", pairFeatures.get(FeatureType.TRIGRAPH));
         assertEquals("аб;б в", pairFeatures.get(FeatureType.DIPHONE));
         assertEquals("аб в", pairFeatures.get(FeatureType.TRIPHONE));
         assertEquals("Rule: boundary", pairFeatures.get(FeatureType.PHONETIC_RULE));

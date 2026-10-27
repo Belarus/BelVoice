@@ -21,13 +21,17 @@ public class DictionaryStore {
             for (Map.Entry<String, Map<FeatureType, String>> entry : dict.words.entrySet()) {
                 String word = entry.getKey();
                 Map<FeatureType, String> features = entry.getValue();
+                String digraph = features != null ? features.getOrDefault(FeatureType.DIGRAPH, "") : "";
+                String trigraph = features != null ? features.getOrDefault(FeatureType.TRIGRAPH, "") : "";
                 String diphone = features != null ? features.getOrDefault(FeatureType.DIPHONE, "") : "";
                 String triphone = features != null ? features.getOrDefault(FeatureType.TRIPHONE, "") : "";
                 String phoneticRule = features != null ? features.getOrDefault(FeatureType.PHONETIC_RULE, "") : "";
-                writer.write(String.format("%s\t%s\t%s\t%s\t%s\t%s",
+                writer.write(String.format("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s",
                         "", // group
                         word != null ? word : "",
                         "", // transcription
+                        digraph != null ? digraph : "",
+                        trigraph != null ? trigraph : "",
                         diphone != null ? diphone : "",
                         triphone != null ? triphone : "",
                         phoneticRule != null ? phoneticRule : ""));
@@ -45,6 +49,8 @@ public class DictionaryStore {
             }
             String[] headers = headerLine.split("\t", -1);
             int wordsIdx = -1;
+            int digraphIdx = -1;
+            int trigraphIdx = -1;
             int diphoneIdx = -1;
             int triphoneIdx = -1;
             int ruleIdx = -1;
@@ -53,6 +59,10 @@ public class DictionaryStore {
                 String h = headers[i].trim();
                 if ("WORDS".equalsIgnoreCase(h)) {
                     wordsIdx = i;
+                } else if ("DIGRAPH".equalsIgnoreCase(h)) {
+                    digraphIdx = i;
+                } else if ("TRIGRAPH".equalsIgnoreCase(h)) {
+                    trigraphIdx = i;
                 } else if ("DIPHONE".equalsIgnoreCase(h)) {
                     diphoneIdx = i;
                 } else if ("TRIPHONE".equalsIgnoreCase(h)) {
@@ -74,6 +84,12 @@ public class DictionaryStore {
                 }
 
                 Map<FeatureType, String> features = new EnumMap<>(FeatureType.class);
+                if (digraphIdx >= 0 && digraphIdx < parts.length && !parts[digraphIdx].isEmpty()) {
+                    features.put(FeatureType.DIGRAPH, parts[digraphIdx]);
+                }
+                if (trigraphIdx >= 0 && trigraphIdx < parts.length && !parts[trigraphIdx].isEmpty()) {
+                    features.put(FeatureType.TRIGRAPH, parts[trigraphIdx]);
+                }
                 if (diphoneIdx >= 0 && diphoneIdx < parts.length && !parts[diphoneIdx].isEmpty()) {
                     features.put(FeatureType.DIPHONE, parts[diphoneIdx]);
                 }

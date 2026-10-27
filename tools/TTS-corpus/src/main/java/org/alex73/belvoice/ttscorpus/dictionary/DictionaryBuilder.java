@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * TODO: выкарыстоўваць частотны слоўнік для выбару найбольш частых слоў для стыкаў, каб не перагружаць слоўнік рэдкімі словамі.
  */
 public class DictionaryBuilder {
-    public static final String HEADER = "GROUP\tWORDS\tTRANSCRIPTION\tDIPHONE\tTRIPHONE\tPHONETIC_RULE";
+    public static final String HEADER = "GROUP\tWORDS\tTRANSCRIPTION\tDIGRAPH\tTRIGRAPH\tDIPHONE\tTRIPHONE\tPHONETIC_RULE";
     public static final String CLUSTERS_HEADER = "GROUP\tEXAMPLES";
 
     private final G2PService g2p;
@@ -32,6 +32,14 @@ public class DictionaryBuilder {
 
     private final Random random = new Random();
 
+    /**
+     * Унікальныя дыграфы, якія сустракаюцца ў слоўніку - толькі для падліку статыстыкі.
+     */
+    private final Set<String> uniqueDigraphs = ConcurrentHashMap.newKeySet();
+    /**
+     * Унікальныя трыграфы, якія сустракаюцца ў слоўніку - толькі для падліку статыстыкі.
+     */
+    private final Set<String> uniqueTrigraphs = ConcurrentHashMap.newKeySet();
     /**
      * Унікальныя дыфоны, якія сустракаюцца ў слоўніку - толькі для падліку статыстыкі.
      */
@@ -67,6 +75,8 @@ public class DictionaryBuilder {
      * а таксама захоўвае файлы кластэрызацыі па літарах і токенах на сутыку.
      */
     public void build(Collection<String> uniqueWords, Path outputFile) throws Exception {
+        uniqueDigraphs.clear();
+        uniqueTrigraphs.clear();
         uniqueDiphones.clear();
         uniqueTriphones.clear();
         letterClusters.clear();
@@ -84,7 +94,7 @@ public class DictionaryBuilder {
         writeClustersFile(letterClusters, resolveSibling(outputFile, "clusters_letters.tsv"));
         writeClustersFile(tokenClusters, resolveSibling(outputFile, "clusters_tokens.tsv"));
 
-        System.out.println("Унікальных дыфонаў: " + uniqueDiphones.size() + ", унікальных трыфонаў: " + uniqueTriphones.size());
+        System.out.println("Унікальных дыграфаў: " + uniqueDigraphs.size() + ", унікальных трыграфаў: " + uniqueTrigraphs.size() + ", унікальных дыфонаў: " + uniqueDiphones.size() + ", унікальных трыфонаў: " + uniqueTriphones.size());
     }
 
     private Path resolveSibling(Path outputFile, String fileName) {
@@ -122,10 +132,12 @@ public class DictionaryBuilder {
 
     private void writeRow(WordData data) {
         collectStat(data);
-        String line = String.format("%s\t%s\t%s\t%s\t%s\t%s",
+        String line = String.format("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s",
                 data.group() != null ? data.group() : "",
                 data.words() != null ? data.words() : "",
                 data.phoneticTranscription() != null ? data.phoneticTranscription() : "",
+                data.digraph() != null ? data.digraph() : "",
+                data.trigraph() != null ? data.trigraph() : "",
                 data.diphone() != null ? data.diphone() : "",
                 data.triphone() != null ? data.triphone() : "",
                 data.phoneticRule() != null ? data.phoneticRule() : "");
@@ -151,6 +163,20 @@ public class DictionaryBuilder {
     }
 
     private void collectStat(WordData data) {
+        if (data.digraph() != null && !data.digraph().isEmpty()) {
+            for (String d : data.digraph().split(";")) {
+                if (!d.isEmpty()) {
+                    uniqueDigraphs.add(d);
+                }
+            }
+        }
+        if (data.trigraph() != null && !data.trigraph().isEmpty()) {
+            for (String t : data.trigraph().split(";")) {
+                if (!t.isEmpty()) {
+                    uniqueTrigraphs.add(t);
+                }
+            }
+        }
         if (data.diphone() != null && !data.diphone().isEmpty()) {
             for (String d : data.diphone().split(";")) {
                 if (!d.isEmpty()) {
