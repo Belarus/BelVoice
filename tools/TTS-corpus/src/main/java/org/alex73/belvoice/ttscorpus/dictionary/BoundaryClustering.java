@@ -19,6 +19,7 @@ public final class BoundaryClustering {
      * галоснай (без націскаў).
      */
     public static String head(String word, boolean consonantsOnly) {
+        word = word.toLowerCase();
         for (int i = 0; i < word.length(); i++) {
             if (VOWELS.indexOf(word.charAt(i)) >= 0) {
                 if (consonantsOnly) {
@@ -41,6 +42,7 @@ public final class BoundaryClustering {
      * галоснай (без націскаў).
      */
     public static String tail(String word, boolean consonantsOnly) {
+        word = word.toLowerCase();
         for (int i = word.length() - 1; i >= 0; i--) {
             if (VOWELS.indexOf(word.charAt(i)) >= 0) {
                 if (consonantsOnly) {

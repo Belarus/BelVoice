@@ -42,6 +42,6 @@ public final class GrammarWordLoader {
         if (s == null || s.isEmpty() || s.indexOf(' ') >= 0 || s.indexOf('.') >= 0) {
             return null; // адкідаем словы з прагаламі і кропкамі TODO
         }
-        return s.toLowerCase();
+        return s;
     }
 }

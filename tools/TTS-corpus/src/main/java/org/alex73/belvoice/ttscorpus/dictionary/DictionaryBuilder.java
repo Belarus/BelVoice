@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Модуль 1: будуе слоўнік з прыкметамі асобных слоў і стыкаў слоў і паточна запісвае ў TSV.
- *
+ * <p>
  * TODO: выкарыстоўваць частотны слоўнік для выбару найбольш частых слоў для стыкаў, каб не перагружаць слоўнік рэдкімі словамі.
  */
 public class DictionaryBuilder {
@@ -50,18 +50,16 @@ public class DictionaryBuilder {
      */
     private final Map<String, Set<String>> tokenClusters = new ConcurrentHashMap<>();
 
+    private BufferedWriter writer;
+    /**
+     * Захоўвае словы для праверкі BelG2P.
+     */
+    private BufferedWriter wordsWriter;
+
     public DictionaryBuilder(G2PService g2p, int pairsPerCombination, long maxPairs) {
         this.g2p = g2p;
         this.pairsPerCombination = pairsPerCombination > 0 ? pairsPerCombination : 50;
         this.maxPairs = maxPairs;
-    }
-
-    public Map<String, Set<String>> getLetterClusters() {
-        return letterClusters;
-    }
-
-    public Map<String, Set<String>> getTokenClusters() {
-        return tokenClusters;
     }
 
     /**
@@ -73,13 +71,15 @@ public class DictionaryBuilder {
         uniqueTriphones.clear();
         letterClusters.clear();
         tokenClusters.clear();
-        try (BufferedWriter writer = Files.newBufferedWriter(outputFile, StandardCharsets.UTF_8)) {
-            writer.write(HEADER);
-            writer.newLine();
+        this.writer = Files.newBufferedWriter(outputFile, StandardCharsets.UTF_8);
+        this.wordsWriter = Files.newBufferedWriter(resolveSibling(outputFile, "grammardb.txt"), StandardCharsets.UTF_8);
+        writer.write(HEADER);
+        writer.newLine();
 
-            processWords(uniqueWords, writer);
-            processBoundaries(uniqueWords, writer);
-        }
+        processWords(uniqueWords);
+        processBoundaries(uniqueWords);
+        writer.close();
+        wordsWriter.close();
 
         writeClustersFile(letterClusters, resolveSibling(outputFile, "clusters_letters.tsv"));
         writeClustersFile(tokenClusters, resolveSibling(outputFile, "clusters_tokens.tsv"));
@@ -120,7 +120,7 @@ public class DictionaryBuilder {
         });
     }
 
-    private void writeRow(BufferedWriter writer, WordData data) {
+    private void writeRow(WordData data) {
         collectStat(data);
         String line = String.format("%s\t%s\t%s\t%s\t%s\t%s",
                 data.group() != null ? data.group() : "",
@@ -135,6 +135,17 @@ public class DictionaryBuilder {
                 writer.newLine();
             } catch (IOException e) {
                 throw new RuntimeException("Error writing to TSV: " + e.getMessage(), e);
+            }
+        }
+    }
+
+    private void writeWords(String words) {
+        synchronized (wordsWriter) {
+            try {
+                wordsWriter.write(words);
+                wordsWriter.newLine();
+            } catch (IOException e) {
+                throw new RuntimeException("Error writing to words file: " + e.getMessage(), e);
             }
         }
     }
@@ -159,15 +170,16 @@ public class DictionaryBuilder {
     /**
      * Апрацоўка асобных слоў: фанетычная транскрыпцыя і выманне features праз G2P.
      */
-    void processWords(Collection<String> words, BufferedWriter writer) {
+    void processWords(Collection<String> words) {
         words.parallelStream().forEach(word -> {
             try {
+                writeWords(word);
                 G2PService.PhoneticResult r = g2p.transcribe(List.of(word));
                 WordData data = new WordData(word);
                 FeatureExtractor.fillFeatures(data, r);
-                writeRow(writer, data);
+                writeRow(data);
             } catch (Exception ex) {
-                throw new RuntimeException("G2P error for word '" + word + "': " + ex.getMessage());
+                throw new RuntimeException("G2P error for word '" + word + "': " + ex.getMessage(), ex);
             }
         });
     }
@@ -175,7 +187,7 @@ public class DictionaryBuilder {
     /**
      * Групуе словы па канчатках (tail) і пачатках (head) ды фармуе пары для кожнай мяжы.
      */
-    void processBoundaries(Collection<String> words, BufferedWriter writer) {
+    void processBoundaries(Collection<String> words) {
         Map<String, List<String>> tailGroups = new TreeMap<>();
         Map<String, List<String>> headGroups = new TreeMap<>();
         // Размяркоўваем словы па групах канчаткаў і пачаткаў
@@ -200,7 +212,7 @@ public class DictionaryBuilder {
                 }
                 List<String> headWords = he.getValue();
                 String group = te.getKey() + " " + he.getKey();
-                processPairs(group, tailWords, headWords, writer, totalPairsWritten);
+                processPairs(group, tailWords, headWords, totalPairsWritten);
             }
         }
     }
@@ -209,7 +221,7 @@ public class DictionaryBuilder {
      * Выбірае пары слоў для канкрэтнага сутыку і апрацоўвае іх.
      */
     private void processPairs(String group, List<String> tailWords, List<String> headWords,
-                              BufferedWriter writer, AtomicLong totalPairsWritten) {
+                              AtomicLong totalPairsWritten) {
         List<String[]> pairs = new ArrayList<>();
         long totalPossible = (long) tailWords.size() * headWords.size();
         if (totalPossible <= pairsPerCombination) {
@@ -243,11 +255,12 @@ public class DictionaryBuilder {
                 return;
             }
             try {
+                writeWords(pair[0] + " " + pair[1]);
                 G2PService.PhoneticResult r = g2p.transcribe(List.of(pair[0], pair[1]));
                 WordData data = new WordData(pair[0] + " " + pair[1]);
                 data.setGroup(group);
                 FeatureExtractor.fillFeatures(data, r);
-                writeRow(writer, data);
+                writeRow(data);
                 totalPairsWritten.incrementAndGet();
 
                 String pairWords = pair[0] + " " + pair[1];

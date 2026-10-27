@@ -3,11 +3,13 @@ package org.alex73.belvoice.ttscorpus.dictionary;
 import org.alex73.fanetyka.impl.Fanetyka3;
 import org.alex73.fanetyka.impl.FanetykaConfig;
 import org.alex73.fanetyka.impl.Huk;
-import org.alex73.fanetyka.impl.str.TokenStr;
+import org.alex73.fanetyka.impl.Logger;
 import org.alex73.fanetyka.impl.str.VoiceToStringTTS;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,18 +30,28 @@ public class G2PService {
 
     public PhoneticResult transcribe(List<String> words) throws Exception {
         Fanetyka3 f = new Fanetyka3(config);
+        List<String> rules = new ArrayList<>();
+        f.logPhenomenon = new Logger() {
+            @Override
+            public void logAttention(String msg) {
+            }
+
+            @Override
+            public void logPrepare(String msg) {
+            }
+
+            @Override
+            public void logChange(String msg) {
+            }
+
+            @Override
+            public void logChange(String title, String details, String changeFrom, String changeTo, String dumpFrom, String dumpTo, String caseCode, List<Huk> hukiBefore) {
+                rules.add(caseCode + ":" + HUK2STR.toString(hukiBefore));
+            }
+        };
         f.calcFanetyka(new ArrayList<>(words));
         String transcription = f.toString(HUK2STR);
-        return new PhoneticResult(transcription, parseRules(f.logPhenomenon.dump()));
-    }
-
-    static List<String> parseRules(String dump) {
-        List<String> rules = new ArrayList<>();
-        Matcher m = RULE.matcher(dump);
-        while (m.find()) {
-            rules.add(m.group(1).trim() + ": " + m.group(2).trim());
-        }
-        return rules;
+        return new PhoneticResult(transcription, rules);
     }
 
     public record PhoneticResult(String transcription, List<String> rules) {

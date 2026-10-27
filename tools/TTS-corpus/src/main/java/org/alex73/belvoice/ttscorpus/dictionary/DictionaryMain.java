@@ -1,6 +1,7 @@
 package org.alex73.belvoice.ttscorpus.dictionary;
 
 import org.alex73.fanetyka.impl.FanetykaConfig;
+import org.alex73.fanetyka.impl.str.ToStringIPA;
 import org.alex73.grammardb.GrammarDB2;
 import org.alex73.grammardb.GrammarFinder;
 
