@@ -1,44 +1,15 @@
 package org.alex73.belvoice.ttscorpus.dictionary;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.EnumMap;
-import java.util.Map;
 
 import org.alex73.belvoice.ttscorpus.model.FeatureType;
 
 /** dictionary.tsv: words and boundary pairs with phonetic transcription and features. */
 public class DictionaryStore {
-
-    public static void save(Dictionary dict, Path file) throws IOException {
-        try (BufferedWriter writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
-            writer.write(DictionaryBuilder.HEADER);
-            writer.newLine();
-            for (Map.Entry<String, Map<FeatureType, String>> entry : dict.words.entrySet()) {
-                String word = entry.getKey();
-                Map<FeatureType, String> features = entry.getValue();
-                String digraph = features != null ? features.getOrDefault(FeatureType.DIGRAPH, "") : "";
-                String trigraph = features != null ? features.getOrDefault(FeatureType.TRIGRAPH, "") : "";
-                String diphone = features != null ? features.getOrDefault(FeatureType.DIPHONE, "") : "";
-                String triphone = features != null ? features.getOrDefault(FeatureType.TRIPHONE, "") : "";
-                String phoneticRule = features != null ? features.getOrDefault(FeatureType.PHONETIC_RULE, "") : "";
-                writer.write(String.format("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s",
-                        "", // group
-                        word != null ? word : "",
-                        "", // transcription
-                        digraph != null ? digraph : "",
-                        trigraph != null ? trigraph : "",
-                        diphone != null ? diphone : "",
-                        triphone != null ? triphone : "",
-                        phoneticRule != null ? phoneticRule : ""));
-                writer.newLine();
-            }
-        }
-    }
 
     public static Dictionary load(Path file) throws IOException {
         Dictionary dict = new Dictionary();
@@ -72,38 +43,72 @@ public class DictionaryStore {
                 }
             }
 
-            String line;
-            while ((line = reader.readLine()) != null) {
+            final int finalWordsIdx = wordsIdx;
+            final int finalDigraphIdx = digraphIdx;
+            final int finalTrigraphIdx = trigraphIdx;
+            final int finalDiphoneIdx = diphoneIdx;
+            final int finalTriphoneIdx = triphoneIdx;
+            final int finalRuleIdx = ruleIdx;
+
+            reader.lines().parallel().forEach(line -> {
                 if (line.isEmpty()) {
-                    continue;
+                    return;
                 }
-                String[] parts = line.split("\t", -1);
-                String word = (wordsIdx >= 0 && wordsIdx < parts.length) ? parts[wordsIdx] : "";
-                if (word.isEmpty()) {
-                    continue;
-                }
-
-                Map<FeatureType, String> features = new EnumMap<>(FeatureType.class);
-                if (digraphIdx >= 0 && digraphIdx < parts.length && !parts[digraphIdx].isEmpty()) {
-                    features.put(FeatureType.DIGRAPH, parts[digraphIdx]);
-                }
-                if (trigraphIdx >= 0 && trigraphIdx < parts.length && !parts[trigraphIdx].isEmpty()) {
-                    features.put(FeatureType.TRIGRAPH, parts[trigraphIdx]);
-                }
-                if (diphoneIdx >= 0 && diphoneIdx < parts.length && !parts[diphoneIdx].isEmpty()) {
-                    features.put(FeatureType.DIPHONE, parts[diphoneIdx]);
-                }
-                if (triphoneIdx >= 0 && triphoneIdx < parts.length && !parts[triphoneIdx].isEmpty()) {
-                    features.put(FeatureType.TRIPHONE, parts[triphoneIdx]);
-                }
-                if (ruleIdx >= 0 && ruleIdx < parts.length && !parts[ruleIdx].isEmpty()) {
-                    features.put(FeatureType.PHONETIC_RULE, parts[ruleIdx]);
-                }
-
-                dict.words.put(word, features);
-            }
+                parseLine(line, dict, finalWordsIdx, finalDigraphIdx, finalTrigraphIdx,
+                        finalDiphoneIdx, finalTriphoneIdx, finalRuleIdx);
+            });
         }
-        dict.rebuildIndex();
         return dict;
     }
+
+    private static void parseLine(String line, Dictionary dict, int wordsIdx, int digraphIdx,
+                                  int trigraphIdx, int diphoneIdx, int triphoneIdx, int ruleIdx) {
+        int maxCol = Math.max(wordsIdx, Math.max(digraphIdx, Math.max(trigraphIdx,
+                Math.max(diphoneIdx, Math.max(triphoneIdx, ruleIdx)))));
+        if (maxCol < 0) {
+            return;
+        }
+
+        int col = 0;
+        int start = 0;
+        int len = line.length();
+
+        String word = null;
+        String digraph = null;
+        String trigraph = null;
+        String diphone = null;
+        String triphone = null;
+        String rule = null;
+
+        for (int i = 0; i <= len; i++) {
+            if (i == len || line.charAt(i) == '\t') {
+                if (col == wordsIdx && i > start) {
+                    word = line.substring(start, i);
+                } else if (col == digraphIdx && i > start) {
+                    digraph = line.substring(start, i);
+                } else if (col == trigraphIdx && i > start) {
+                    trigraph = line.substring(start, i);
+                } else if (col == diphoneIdx && i > start) {
+                    diphone = line.substring(start, i);
+                } else if (col == triphoneIdx && i > start) {
+                    triphone = line.substring(start, i);
+                } else if (col == ruleIdx && i > start) {
+                    rule = line.substring(start, i);
+                }
+                col++;
+                start = i + 1;
+            }
+        }
+
+        if (word == null || word.isEmpty()) {
+            return;
+        }
+
+        dict.addFeatures(word, FeatureType.DIGRAPH, digraph);
+        dict.addFeatures(word, FeatureType.TRIGRAPH, trigraph);
+        dict.addFeatures(word, FeatureType.DIPHONE, diphone);
+        dict.addFeatures(word, FeatureType.TRIPHONE, triphone);
+        dict.addFeatures(word, FeatureType.PHONETIC_RULE, rule);
+    }
 }
+

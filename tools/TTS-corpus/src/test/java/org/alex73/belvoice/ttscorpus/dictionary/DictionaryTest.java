@@ -83,24 +83,20 @@ class DictionaryTest {
     }
 
     @Test
-    void storeRoundTrip(@TempDir Path dir) throws Exception {
-        Dictionary d = new Dictionary();
-        Feature f1 = new Feature(FeatureType.DIPHONE, "a-b");
-        Feature f2 = new Feature(FeatureType.DIPHONE, "b-c");
-        Feature fb = new Feature(FeatureType.DIPHONE, "b|b");
-        Feature fd = new Feature(FeatureType.DIGRAPH, "аб");
-        Feature ft = new Feature(FeatureType.TRIGRAPH, "абв");
-        d.words.put("аб", Map.of(FeatureType.DIPHONE, "a-b;b-c", FeatureType.DIGRAPH, "аб"));
-        d.words.put("аб ба", Map.of(FeatureType.DIPHONE, "b|b", FeatureType.TRIGRAPH, "абв"));
+    void loadFromTsv(@TempDir Path dir) throws Exception {
         Path file = dir.resolve("dictionary.tsv");
-        DictionaryStore.save(d, file);
+        String content = DictionaryBuilder.HEADER + "\n"
+                + "\tаб\t\tаб\t\ta-b;b-c\t\t\n"
+                + "g1\tаб ба\t\t\tабв\tb|b\t\t\n";
+        java.nio.file.Files.writeString(file, content);
+
         Dictionary l = DictionaryStore.load(file);
-        assertEquals(d.words, l.words);
-        assertEquals(List.of("аб"), l.invertedIndex.get(f1));
-        assertEquals(List.of("аб"), l.invertedIndex.get(f2));
-        assertEquals(List.of("аб ба"), l.invertedIndex.get(fb));
-        assertEquals(List.of("аб"), l.invertedIndex.get(fd));
-        assertEquals(List.of("аб ба"), l.invertedIndex.get(ft));
+        assertEquals(List.of("аб"), l.getWordsByFeature(FeatureType.DIPHONE, "a-b"));
+        assertEquals(List.of("аб"), l.getWordsByFeature(FeatureType.DIPHONE, "b-c"));
+        assertEquals(List.of("аб ба"), l.getWordsByFeature(FeatureType.DIPHONE, "b|b"));
+        assertEquals(List.of("аб"), l.getWordsByFeature(FeatureType.DIGRAPH, "аб"));
+        assertEquals(List.of("аб ба"), l.getWordsByFeature(FeatureType.TRIGRAPH, "абв"));
+        assertEquals(List.of("аб"), l.getWordsByFeature(new Feature(FeatureType.DIPHONE, "a-b")));
     }
 
     @Test
@@ -126,19 +122,10 @@ class DictionaryTest {
         assertTrue(lines.contains("а а\tрака аблокі\tаб в\tра;ак;ка;а а;аб;бл;ло;ок;кі\tрак;ака;ка а;а аб;абл;бло;лок;окі\tаб;б в\tаб в\tRule: boundary"));
 
         Dictionary dict = DictionaryStore.load(file);
-        assertTrue(dict.words.containsKey("рака"));
-        assertTrue(dict.words.containsKey("аблокі"));
-        assertTrue(dict.words.containsKey("рака аблокі"));
-
-        Map<FeatureType, String> pairFeatures = dict.words.get("рака аблокі");
-        assertNotNull(pairFeatures);
-        assertEquals("ра;ак;ка;а а;аб;бл;ло;ок;кі", pairFeatures.get(FeatureType.DIGRAPH));
-        assertEquals("рак;ака;ка а;а аб;абл;бло;лок;окі", pairFeatures.get(FeatureType.TRIGRAPH));
-        assertEquals("аб;б в", pairFeatures.get(FeatureType.DIPHONE));
-        assertEquals("аб в", pairFeatures.get(FeatureType.TRIPHONE));
-        assertEquals("Rule: boundary", pairFeatures.get(FeatureType.PHONETIC_RULE));
-
         assertFalse(dict.invertedIndex.isEmpty());
+        assertTrue(dict.getWordsByFeature(FeatureType.DIGRAPH, "ра").contains("рака"));
+        assertTrue(dict.getWordsByFeature(FeatureType.DIPHONE, "б в").contains("рака аблокі"));
+        assertTrue(dict.getWordsByFeature(FeatureType.PHONETIC_RULE, "Rule: boundary").contains("рака аблокі"));
 
         // Праверка файлаў кластэрызацыі
         Path lettersFile = dir.resolve("clusters_letters.tsv");

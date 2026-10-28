@@ -1,5 +1,7 @@
 package org.alex73.belvoice.ttscorpus.dictionary;
 
+import org.alex73.belvoice.ttscorpus.model.Feature;
+import org.alex73.belvoice.ttscorpus.model.FeatureType;
 import org.alex73.belvoice.ttscorpus.model.WordData;
 import org.alex73.fanetyka.impl.Huk;
 import org.alex73.fanetyka.impl.str.TokenStr;
@@ -49,6 +51,38 @@ public final class FeatureExtractor {
             Set<String> rules = new LinkedHashSet<>(r.rules());
             data.setPhoneticRule(String.join(";", rules));
         }
+    }
+
+    /**
+     * Extracts all features as a set of {@link Feature} objects.
+     */
+    public static Set<Feature> extractFeatures(String text, G2PService.PhoneticResult r) {
+        Set<Feature> features = new LinkedHashSet<>();
+        if (text != null) {
+            for (String d : textWindows(text, 2)) {
+                features.add(new Feature(FeatureType.DIGRAPH, d));
+            }
+            for (String t : textWindows(text, 3)) {
+                features.add(new Feature(FeatureType.TRIGRAPH, t));
+            }
+        }
+        if (r != null) {
+            if (r.transcription() != null) {
+                byte[] tokens = TokenStr.str2tokens(r.transcription());
+                for (String dp : windows(tokens, 2)) {
+                    features.add(new Feature(FeatureType.DIPHONE, dp));
+                }
+                for (String tp : windows(tokens, 3)) {
+                    features.add(new Feature(FeatureType.TRIPHONE, tp));
+                }
+            }
+            if (r.rules() != null) {
+                for (String rule : r.rules()) {
+                    features.add(new Feature(FeatureType.PHONETIC_RULE, rule));
+                }
+            }
+        }
+        return features;
     }
 
     /**

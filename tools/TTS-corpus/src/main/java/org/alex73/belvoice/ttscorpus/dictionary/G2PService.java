@@ -8,10 +8,6 @@ import org.alex73.fanetyka.impl.str.VoiceToStringTTS;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Thread-safe wrapper over BelG2P: new Fanetyka3 is created for each call.
@@ -25,30 +21,34 @@ public class G2PService {
         this.config = config;
     }
 
-    public PhoneticResult transcribe(List<String> words) throws Exception {
-        Fanetyka3 f = new Fanetyka3(config);
-        List<String> rules = new ArrayList<>();
-        f.logPhenomenon = new Logger() {
-            @Override
-            public void logAttention(String msg) {
-            }
+    public PhoneticResult transcribe(List<String> words) {
+        try {
+            Fanetyka3 f = new Fanetyka3(config);
+            List<String> rules = new ArrayList<>();
+            f.logPhenomenon = new Logger() {
+                @Override
+                public void logAttention(String msg) {
+                }
 
-            @Override
-            public void logPrepare(String msg) {
-            }
+                @Override
+                public void logPrepare(String msg) {
+                }
 
-            @Override
-            public void logChange(String msg) {
-            }
+                @Override
+                public void logChange(String msg) {
+                }
 
-            @Override
-            public void logChange(String title, String details, String changeFrom, String changeTo, String dumpFrom, String dumpTo, String caseCode, List<Huk> hukiBefore) {
-                rules.add(caseCode + ":" + HUK2STR.toString(hukiBefore));
-            }
-        };
-        f.calcFanetyka(new ArrayList<>(words));
-        String transcription = f.toString(HUK2STR);
-        return new PhoneticResult(transcription, rules);
+                @Override
+                public void logChange(String title, String details, String changeFrom, String changeTo, String dumpFrom, String dumpTo, String caseCode, List<Huk> hukiBefore) {
+                    rules.add(caseCode + ":" + HUK2STR.toString(hukiBefore));
+                }
+            };
+            f.calcFanetyka(new ArrayList<>(words));
+            String transcription = f.toString(HUK2STR);
+            return new PhoneticResult(transcription, rules);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to transcribe words: " + words, e);
+        }
     }
 
     public record PhoneticResult(String transcription, List<String> rules) {
