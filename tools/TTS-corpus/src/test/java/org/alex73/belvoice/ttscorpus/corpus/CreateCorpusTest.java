@@ -160,7 +160,7 @@ class CreateCorpusTest {
         CreateCorpus.Candidate c2 = new CreateCorpus.Candidate("line2", List.of("w2"), Set.of(d1));
         CreateCorpus.Candidate c3 = new CreateCorpus.Candidate("line3", List.of("w3"), Set.of(d3));
 
-        List<CreateCorpus.Candidate> selected = corpus.selectCorpus(List.of(c1, c2, c3), Set.of(), 3);
+        List<CreateCorpus.Candidate> selected = corpus.selectCorpus(Set.of(c1, c2, c3), Set.of(), 3);
 
         assertEquals(3, selected.size());
         // First must be c1 because it has 2 new diphones (score 200)

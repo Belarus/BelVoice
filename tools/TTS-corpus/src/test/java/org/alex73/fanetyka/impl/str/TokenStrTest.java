@@ -1,28 +1,40 @@
 package org.alex73.fanetyka.impl.str;
 
+import org.alex73.fanetyka.impl.Huk;
 import org.junit.jupiter.api.Test;
 
-import java.util.Set;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class TokenStrTest {
 
-    private static final Set<String> EXPECTED_VOWELS = Set.of(
-            "а", "а´", "ɐ", "э", "э´", "і", "і´", "о", "о´", "у", "у´", "ы", "ы´", "ə", "ə´"
-    );
-
+    // Правярае, што isVowel правільна вызначае галосныя гукі для ўсіх токенаў з token2str
     @Test
     void testIsVowel() {
-        for (int i = 0; i < TokenStr.token2str.length; i++) {
-            byte token = (byte) i;
-            String tokenStr = TokenStr.token2str[i];
-            boolean expected = EXPECTED_VOWELS.contains(tokenStr);
-            assertEquals(expected, TokenStr.isVowel(token),
-                    () -> "Unexpected isVowel result for token id " + token + ": \"" + tokenStr + "\"");
+        for (boolean stress : List.of(true, false)) {
+            for (Huk.BAZAVY_HUK b : Huk.halosnyja) {
+                Huk h = new Huk("", b);
+                h.stress = stress;
+                String hukStr = new ToStringSimpleStressIPA().huk2str(h);
+                byte[] tokens = TokenStr.str2tokens(hukStr);
+                assertEquals(1, tokens.length, "Expected single token for Huk: " + hukStr);
+                assertTrue(TokenStr.isVowel(tokens[0]), "Unexpected vowel in Huk.halosnyja: " + hukStr);
+            }
         }
     }
 
+    // Правярае, што ўсе гукі маюць адпаведныя токены ў token2str і str2tokens
+    @Test
+    void testConvert() {
+        for (Huk.POUNY_HUK ph : Huk.POUNY_HUK.values()) {
+            String h = ToStringSimpleStressIPA.IPA_MAP.get(ph);
+            byte[] tokens = TokenStr.str2tokens(h);
+            assertEquals(1, tokens.length, "Expected single token for Huk: " + h);
+        }
+    }
+
+    // Правярае зваротнае пераўтварэнне (токен -> радок -> токен) для кожнага асобнага токена
     @Test
     void testSingleTokensRoundTrip() {
         for (int i = 0; i < TokenStr.token2str.length; i++) {
@@ -38,6 +50,7 @@ class TokenStrTest {
         }
     }
 
+    // Правярае зваротнае пераўтварэнне (токены -> радок -> токены) для ўсіх камбінацый з трох токенаў
     @Test
     void testTokenPairsRoundTrip() {
         for (int i = 0; i < TokenStr.token2str.length; i++) {
